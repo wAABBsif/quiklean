@@ -1,8 +1,9 @@
+use std::{fs, io::{Read, Write}, path::PathBuf};
 use chrono::TimeDelta;
 
 #[derive(PartialEq, Eq, Debug)]
-struct Config {
-    time_limit: chrono::TimeDelta
+pub struct Config {
+    pub time_limit: chrono::TimeDelta
 }
 
 impl Config {
@@ -60,6 +61,27 @@ impl Config {
     }
 }
 
+pub fn get_config_path() -> Option<PathBuf> {
+    let mut config_dir = dirs::config_dir()?;
+    config_dir.push("quiklean/");
+    fs::create_dir_all(&config_dir).ok()?;
+    config_dir.push("config.json");
+    Some(config_dir)
+}
+
+pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::Error>> {
+    let mut file: fs::File;
+    if !fs::exists(&path)? {
+        file = fs::File::create(&path)?;
+        let contents = Config::to_json(&Config::default())?;
+        write!(file, "{}", contents)?;
+    }
+    file = fs::File::open(path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,6 +106,12 @@ mod tests {
     #[test]
     fn test_default_matches_string() {
         assert_eq!(Config::default(), Config::from_json(DEFAULT_JSON).unwrap());
+    }
+
+    #[test]
+    fn test_read_config_file() {
+        let config_dir = get_config_path().unwrap();
+        read_config_file(&config_dir).expect("Could not read config file!");
     }
 }
 
