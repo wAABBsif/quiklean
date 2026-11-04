@@ -2,8 +2,7 @@ use quiklean::config;
 use quiklean::trash;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config_path = config::get_config_path().ok_or_else(||
-        "Expected to find config path")?;
+    let config_path = config::get_config_path()?;
     let config = config::Config::from_json(&config::read_config_file(&config_path)?)?;
     println!("Successfully loaded config file {}", config_path.to_str().unwrap_or("UNKNOWN"));
     println!("Time limit is {} seconds", config.time_limit.num_seconds());
@@ -16,9 +15,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Successfully found trash info at {}", trash_info.to_str().unwrap_or("UNKNOWN"));
     let trash_entries = trash::TrashEntry::read_trash_dir(&trash_files, &trash_info)?;
     for entry in trash_entries {
-        let file = entry.file.to_str().unwrap_or("UNKNOWN");
-        let info = entry.info.to_str().unwrap_or("UNKNOWN");
-        println!("file: {file}, info: {info}");
+        let info = trash::TrashInfo::read_file(&entry.info)?;
+        println!("Path: {}, Date: {}", info.path.to_str().unwrap_or("UNKNOWN"), 
+            info.deletion_date.to_utc())
     }
     Ok(()) 
 }

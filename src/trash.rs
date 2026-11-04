@@ -1,4 +1,5 @@
-use std::{fs, path::PathBuf};
+use std::{fs, io::Read, path::PathBuf, str::FromStr};
+use chrono::{DateTime, TimeZone};
 
 pub fn get_trash_dir() -> Option<PathBuf> {
     let mut path = dirs::data_local_dir()?;
@@ -64,5 +65,73 @@ impl TrashEntry {
         }
 
         Ok(result)
+    }
+}
+
+pub struct TrashInfo {
+    pub path: PathBuf,
+    pub deletion_date: DateTime<chrono::Local>
+}
+
+impl TrashInfo {
+    pub fn read_file(path: &PathBuf) -> Result<TrashInfo, Box <dyn std::error::Error>> {
+        let mut file = fs::File::open(path)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        let mut lines = contents.lines();
+        if lines.next().unwrap_or_default() != "[Trash Info]" {
+            Err("Info file does not contain [Trash Info] as first line")?;
+        }
+        
+        let mut path: Option<PathBuf> = None;
+        let mut deletion_date: Option<DateTime<chrono::Local>> = None;
+        for line in lines {
+            let mut entries = line.split('=');
+            let key = entries.next().unwrap_or_default();
+            let value = entries.next().unwrap_or_default();
+            match &key[..] {
+                "Path" => {
+                    if path.is_some() {
+                        continue
+                    }
+                    let result = TrashInfo::get_path_from_string(value);
+                    if result.is_err() {
+                        continue
+                    }
+                    path = Some(result.unwrap());
+                }
+                "DeletionDate" => {
+                    if deletion_date.is_some() {
+                        continue
+                    }
+                    let result = TrashInfo::get_deletion_date_from_string(value);
+                    if result.is_err() {
+                        continue
+                    }
+                    deletion_date = Some(result.unwrap());
+                }
+                _ => continue
+            }
+        }
+
+        Ok(TrashInfo {
+            path: path.ok_or_else(|| "Could not find path")?,
+            deletion_date: deletion_date.ok_or_else(|| "Could not find deletion date")?,
+        })
+    }
+
+    fn get_path_from_string(path: &str) -> Result<PathBuf, Box <dyn std::error::Error>> {
+        //We COULD decode the percent-encoding but it's not necessary
+
+        Ok(PathBuf::from_str(path)?)
+    }
+
+    fn get_deletion_date_from_string(deletion_date: &str) -> Result<DateTime<chrono::Local>,
+        Box <dyn std::error::Error>>
+    {
+        let fixed = chrono::DateTime::parse_from_rfc3339(&(String::from(deletion_date) + "Z"))?;
+        let naive = fixed.naive_utc();
+        let result = chrono::Local.from_local_datetime(&naive);
+        return Ok(result.single().ok_or_else(|| "Could not convert time")?);
     }
 }
