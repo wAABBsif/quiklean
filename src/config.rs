@@ -61,12 +61,12 @@ impl Config {
     }
 }
 
-pub fn get_config_path() -> Option<PathBuf> {
-    let mut config_dir = dirs::config_dir()?;
+pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
+    let mut config_dir = dirs::config_dir().ok_or_else(|| "Could not find config path")?;
     config_dir.push("quiklean/");
-    fs::create_dir_all(&config_dir).ok()?;
+    fs::create_dir_all(&config_dir)?;
     config_dir.push("config.json");
-    Some(config_dir)
+    Ok(config_dir)
 }
 
 pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::Error>> {
