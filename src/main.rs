@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         || "Expected to find trash info path")?;
     println!("Successfully found trash files at {}", trash_files.to_str().unwrap_or("UNKNOWN"));
     println!("Successfully found trash info at {}", trash_info.to_str().unwrap_or("UNKNOWN"));
-    let trash_entries = trash::TrashPath::read_trash_dir(&trash_files, &trash_info)?;
+    let trash_entries = trash::TrashEntry::read_trash_dir(&trash_files, &trash_info)?;
     for entry in trash_entries {
         let file = entry.file.to_str().unwrap_or("UNKNOWN");
         let info = entry.info.to_str().unwrap_or("UNKNOWN");
