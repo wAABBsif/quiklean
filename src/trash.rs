@@ -1,6 +1,7 @@
 use std::{fs, io::Read, path::PathBuf, str::FromStr};
 use chrono::{DateTime, TimeZone};
 
+//Should be /home/[USER]/.local/share/Trash
 pub fn get_trash_dir() -> Option<PathBuf> {
     let mut path = dirs::data_local_dir()?;
     path.push("Trash");
@@ -9,7 +10,7 @@ pub fn get_trash_dir() -> Option<PathBuf> {
     }
     return Some(path);
 }
-
+//Should be /home/[USER]/.local/share/Trash/files
 pub fn get_trash_files_dir() -> Option<PathBuf> {
     let mut path = get_trash_dir()?;
     path.push("files");
@@ -19,6 +20,7 @@ pub fn get_trash_files_dir() -> Option<PathBuf> {
     return Some(path);
 }
 
+//Should be /home/[USER]/.local/share/Trash/info
 pub fn get_trash_info_dir() -> Option<PathBuf> {
     let mut path = get_trash_dir()?;
     path.push("info");
@@ -55,6 +57,7 @@ impl TrashEntry {
             let mut info = info.clone();
 
             file.push(&name);
+            //Trashinfo files have the same name, but with the extension.
             info.push(&name);
             info.add_extension("trashinfo");
             if !fs::exists(&info).unwrap_or(false) {
@@ -79,10 +82,13 @@ impl TrashInfo {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         let mut lines = contents.lines();
+        //Trashinfo files MUST contain this as the first line.
         if lines.next().unwrap_or_default() != "[Trash Info]" {
             Err("Info file does not contain [Trash Info] as first line")?;
         }
         
+        //The specification says that the first instance of these values is to be used.
+        //Therefore, we only set these if they still don't already have a value.
         let mut path: Option<PathBuf> = None;
         let mut deletion_date: Option<DateTime<chrono::Local>> = None;
         for line in lines {
@@ -121,14 +127,14 @@ impl TrashInfo {
     }
 
     fn get_path_from_string(path: &str) -> Result<PathBuf, Box <dyn std::error::Error>> {
-        //We COULD decode the percent-encoding but it's not necessary
-
+        //We COULD decode the percent-encoding but it's not necessary for functionality
         Ok(PathBuf::from_str(path)?)
     }
 
     fn get_deletion_date_from_string(deletion_date: &str) -> Result<DateTime<chrono::Local>,
         Box <dyn std::error::Error>>
     {
+        //The way chrono sees rfc3339 and the way Linux sees it is seemingly different
         let fixed = chrono::DateTime::parse_from_rfc3339(&(String::from(deletion_date) + "Z"))?;
         let naive = fixed.naive_utc();
         let result = chrono::Local.from_local_datetime(&naive);

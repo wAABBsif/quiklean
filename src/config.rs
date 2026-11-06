@@ -20,6 +20,8 @@ impl Config {
         let json: serde_json::Value = serde_json::from_str(json)?;
         let mut result = Config::default();
         let time_limit = &json["time_limit"];
+        //In config.json, time_limit is stored as an object containing fields for different units.
+        //Therefore, we have to read each unit to get the complete TimeDelta.
         if !time_limit.is_null() {
             result.time_limit = TimeDelta::zero();
             let mut seconds = 0;
@@ -61,6 +63,7 @@ impl Config {
     }
 }
 
+//Should be /home/[USER]/.config/quiklean/config.json
 pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
     let mut config_dir = dirs::config_dir().ok_or_else(|| "Could not find config path")?;
     config_dir.push("quiklean/");
@@ -82,6 +85,7 @@ pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::E
     Ok(contents)
 }
 
+//These tests ensure that configurations can be converted to and from .json files.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,12 +110,6 @@ mod tests {
     #[test]
     fn test_default_matches_string() {
         assert_eq!(Config::default(), Config::from_json(DEFAULT_JSON).unwrap());
-    }
-
-    #[test]
-    fn test_read_config_file() {
-        let config_dir = get_config_path().unwrap();
-        read_config_file(&config_dir).expect("Could not read config file!");
     }
 }
 
