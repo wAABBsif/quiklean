@@ -5,6 +5,7 @@ use chrono::{DateTime, TimeZone};
 pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = dirs::data_local_dir().ok_or_else(|| "Could not find local data directory")?;
     path.push("Trash");
+
     if !fs::exists(&path)? {
         Err(format!("Trash directory '{}' doesn't exist", path.to_string_lossy()))?
     }
@@ -14,6 +15,7 @@ pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
 pub fn get_trash_files_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = get_trash_dir()?;
     path.push("files");
+
     if !fs::exists(&path)? {
         Err(format!("Trash files directory '{}' doesn't exist", path.to_string_lossy()))?
     }
@@ -24,6 +26,7 @@ pub fn get_trash_files_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
 pub fn get_trash_info_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = get_trash_dir()?;
     path.push("info");
+
     if !fs::exists(&path)? {
         Err(format!("Trash info directory '{}' doesn't exist", path.to_string_lossy()))?
     }
@@ -43,8 +46,8 @@ impl TrashEntry {
         }
     }
 
-    pub fn read_trash_dir(files: &PathBuf, info: &PathBuf) -> Result<Vec<TrashEntry>,
-        Box<dyn std::error::Error>>
+    pub fn read_trash_dir(files: &PathBuf, info: &PathBuf) ->
+        Result<Vec<TrashEntry>, Box<dyn std::error::Error>>
     {
         let mut result: Vec<TrashEntry> = Vec::new();
 
@@ -82,6 +85,7 @@ impl TrashInfo {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         let mut lines = contents.lines();
+
         //Trashinfo files MUST contain this as the first line.
         if lines.next().unwrap_or_default() != "[Trash Info]" {
             Err("Info file does not contain [Trash Info] as first line")?
@@ -93,6 +97,7 @@ impl TrashInfo {
         let mut deletion_date: Option<DateTime<chrono::Local>> = None;
         for line in lines {
             let mut entries = line.split('=');
+
             let key = entries.next().unwrap_or_default();
             let value = entries.next().unwrap_or_default();
             match &key[..] {
@@ -135,10 +140,13 @@ impl TrashInfo {
         Box<dyn std::error::Error>>
     {
         //The way chrono sees rfc3339 and the way Linux sees it is seemingly different
+        //This is why the "Z" is added to deletion_date.
         let fixed = chrono::DateTime::parse_from_rfc3339(&(String::from(deletion_date) + "Z"))?;
         let naive = fixed.naive_utc();
+
         let result = chrono::Local.from_local_datetime(&naive);
-        Ok(result.single().ok_or_else(||
-                format!("Could not convert {} into time", deletion_date))?)
+        let result = result.single();
+        let result = result.ok_or_else(|| format!("Could not convert {deletion_date} into time"))?;
+        Ok(result)
     }
 }

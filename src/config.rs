@@ -20,6 +20,7 @@ impl Config {
         let json: serde_json::Value = serde_json::from_str(json)?;
         let mut result = Config::default();
         let time_limit = &json["time_limit"];
+
         //In config.json, time_limit is stored as an object containing fields for different units.
         //Therefore, we have to read each unit to get the complete TimeDelta.
         if !time_limit.is_null() {
@@ -31,6 +32,7 @@ impl Config {
                 if unit_value.is_null() {
                     continue;
                 }
+
                 let error_msg = format!("'{unit}' is not an i64");
                 let unit_value = unit_value.as_number().ok_or_else(|| error_msg.clone())?;
                 let unit_value = unit_value.as_i64().ok_or_else(|| error_msg.clone())?;
@@ -45,6 +47,7 @@ impl Config {
     pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
         let mut json = serde_json::Map::new();
         let mut time_limit = serde_json::Map::new();
+
         time_limit.insert(String::from("weeks"), serde_json::Value::Number(
                 serde_json::Number::from(self.time_limit.num_weeks())));
         time_limit.insert(String::from("days"), serde_json::Value::Number(
@@ -55,7 +58,9 @@ impl Config {
                 serde_json::Number::from(self.time_limit.num_minutes() % 60)));
         time_limit.insert(String::from("seconds"), serde_json::Value::Number(
                 serde_json::Number::from(self.time_limit.num_seconds() % 60)));
-        json.insert(String::from("time_limit"), serde_json::Value::Object(time_limit));
+
+        json.insert(String::from("time_limit"),
+            serde_json::Value::Object(time_limit));
 
         let result = serde_json::Value::Object(json);
         let result = serde_json::to_string_pretty(&result)?;
@@ -66,21 +71,26 @@ impl Config {
 //Should be /home/[USER]/.config/quiklean/config.json
 pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
     let mut config_dir = dirs::config_dir().ok_or_else(|| "Could not find config path")?;
+
     config_dir.push("quiklean/");
     fs::create_dir_all(&config_dir)?;
+
     config_dir.push("config.json");
     Ok(config_dir)
 }
 
 pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::Error>> {
     let mut file: fs::File;
+
     if !fs::exists(&path)? {
         file = fs::File::create(&path)?;
         let contents = Config::to_json(&Config::default())?;
         write!(file, "{}", contents)?;
     }
+
     file = fs::File::open(path)?;
     let mut contents = String::new();
+
     file.read_to_string(&mut contents)?;
     Ok(contents)
 }
