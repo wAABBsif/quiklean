@@ -6,10 +6,21 @@ pub struct Config {
     pub time_limit: chrono::TimeDelta
 }
 
-impl Config {
-    const TIME_UNITS: [&str; 5]  = ["weeks", "days", "hours", "minutes", "seconds"];
-    const TIME_UNITS_AS_SECONDS: [i64; 5] = [60 * 60 * 24 * 7, 60 * 60 * 24, 60 * 60, 60, 1];
+#[derive(serde::Serialize, serde::Deserialize)]
+struct ConfigParser {
+    time_limit: TimeDeltaParser
+}
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct TimeDeltaParser {
+    weeks: i64,
+    days: i64,
+    hours: i64,
+    minutes: i64,
+    seconds: i64
+}
+
+impl Config {
     pub fn default() -> Config {
         Config {
             time_limit: TimeDelta::weeks(2)
@@ -17,54 +28,51 @@ impl Config {
     }
 
     pub fn from_json(json: &str) -> Result<Config, Box<dyn std::error::Error>>{
-        let json: serde_json::Value = serde_json::from_str(json)?;
-        let mut result = Config::default();
-        let time_limit = &json["time_limit"];
-
-        //In config.json, time_limit is stored as an object containing fields for different units.
-        //Therefore, we have to read each unit to get the complete TimeDelta.
-        if !time_limit.is_null() {
-            result.time_limit = TimeDelta::zero();
-            let mut seconds = 0;
-            for i in 0..Config::TIME_UNITS.len() {
-                let unit = Config::TIME_UNITS[i];
-                let unit_value = &time_limit[unit];
-                if unit_value.is_null() {
-                    continue;
-                }
-
-                let error_msg = format!("'{unit}' is not an i64");
-                let unit_value = unit_value.as_number().ok_or_else(|| error_msg.clone())?;
-                let unit_value = unit_value.as_i64().ok_or_else(|| error_msg.clone())?;
-                seconds += Config::TIME_UNITS_AS_SECONDS[i] * unit_value;
-            }
-            result.time_limit = TimeDelta::try_seconds(seconds).ok_or_else(|| "Time too large!")?;
-        }
-
+        let result: ConfigParser = serde_json::from_str(json)?;
+        let result: Config = result.to_config()?;
         Ok(result)
     }
 
     pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let mut json = serde_json::Map::new();
-        let mut time_limit = serde_json::Map::new();
-
-        time_limit.insert(String::from("weeks"), serde_json::Value::Number(
-                serde_json::Number::from(self.time_limit.num_weeks())));
-        time_limit.insert(String::from("days"), serde_json::Value::Number(
-                serde_json::Number::from(self.time_limit.num_days() % 7)));
-        time_limit.insert(String::from("hours"), serde_json::Value::Number(
-                serde_json::Number::from(self.time_limit.num_hours() % 24)));
-        time_limit.insert(String::from("minutes"), serde_json::Value::Number(
-                serde_json::Number::from(self.time_limit.num_minutes() % 60)));
-        time_limit.insert(String::from("seconds"), serde_json::Value::Number(
-                serde_json::Number::from(self.time_limit.num_seconds() % 60)));
-
-        json.insert(String::from("time_limit"),
-            serde_json::Value::Object(time_limit));
-
-        let result = serde_json::Value::Object(json);
+        let result = ConfigParser::from_config(self);
         let result = serde_json::to_string_pretty(&result)?;
         Ok(result)
+    }
+}
+
+impl ConfigParser {
+    fn from_config(config: &Config) -> Self {
+        ConfigParser {
+            time_limit: TimeDeltaParser::from_time_delta(&config.time_limit)
+        }
+    }
+
+    fn to_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
+        Ok(Config {
+            time_limit: self.time_limit.to_time_delta()?
+        })
+    }
+}
+
+impl TimeDeltaParser {
+    fn from_time_delta(delta: &chrono::TimeDelta) -> Self {
+        TimeDeltaParser {
+            weeks: delta.num_weeks(),
+            days: delta.num_days() % 7,
+            hours: delta.num_hours() % 24,
+            minutes: delta.num_minutes() % 60,
+            seconds: delta.num_seconds() % 60
+        }
+    }
+
+    fn to_time_delta(&self) -> Result<chrono::TimeDelta, Box<dyn std::error::Error>> {
+        Ok(
+            chrono::TimeDelta::try_weeks(self.weeks).ok_or_else(|| "Too many weeks")?
+            + chrono::TimeDelta::try_days(self.days).ok_or_else(|| "Too many days")?
+            + chrono::TimeDelta::try_hours(self.hours).ok_or_else(|| "Too many hours")?
+            + chrono::TimeDelta::try_minutes(self.minutes).ok_or_else(|| "Too many minutes")?
+            + chrono::TimeDelta::try_seconds(self.seconds).ok_or_else(|| "Too many seconds")?
+        )
     }
 }
 
