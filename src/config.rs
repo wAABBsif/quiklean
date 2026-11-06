@@ -34,17 +34,17 @@ impl Config {
     }
 
     pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let result = ConfigParser::from_config(self);
+        let result = ConfigParser::from_config(self)?;
         let result = serde_json::to_string_pretty(&result)?;
         Ok(result)
     }
 }
 
 impl ConfigParser {
-    fn from_config(config: &Config) -> Self {
-        ConfigParser {
+    fn from_config(config: &Config) -> Result<ConfigParser, Box<dyn std::error::Error>> {
+        Ok(ConfigParser {
             time_limit: TimeDeltaParser::from_time_delta(&config.time_limit)
-        }
+        })
     }
 
     fn to_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
