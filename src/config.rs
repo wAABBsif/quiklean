@@ -1,13 +1,22 @@
 use std::{fs, io::{Read, Write}, path::PathBuf};
-use chrono::TimeDelta;
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Config {
+    pub trash: Trash
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Trash {
     pub time_limit: chrono::TimeDelta
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct ConfigParser {
+    trash: TrashParser
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct TrashParser {
     time_limit: TimeDeltaParser
 }
 
@@ -23,7 +32,9 @@ struct TimeDeltaParser {
 impl Config {
     pub fn default() -> Config {
         Config {
-            time_limit: TimeDelta::weeks(2)
+            trash: Trash {
+                time_limit: chrono::TimeDelta::weeks(2)
+            }
         }
     }
 
@@ -43,19 +54,33 @@ impl Config {
 impl ConfigParser {
     fn from_config(config: &Config) -> Result<ConfigParser, Box<dyn std::error::Error>> {
         Ok(ConfigParser {
-            time_limit: TimeDeltaParser::from_time_delta(&config.time_limit)
+            trash: TrashParser::from_config(&config.trash)?
         })
     }
 
     fn to_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
         Ok(Config {
-            time_limit: self.time_limit.to_time_delta()?
+            trash: self.trash.to_config()?
+        })
+    }
+}
+
+impl TrashParser {
+    fn from_config(trash: &Trash) -> Result<TrashParser, Box<dyn std::error::Error>> {
+        Ok(TrashParser {
+            time_limit: TimeDeltaParser::from_config(&trash.time_limit)
+        })
+    }
+
+    fn to_config(&self) -> Result<Trash, Box<dyn std::error::Error>> {
+        Ok(Trash {
+            time_limit: self.time_limit.to_config()?
         })
     }
 }
 
 impl TimeDeltaParser {
-    fn from_time_delta(delta: &chrono::TimeDelta) -> Self {
+    fn from_config(delta: &chrono::TimeDelta) -> TimeDeltaParser {
         TimeDeltaParser {
             weeks: delta.num_weeks(),
             days: delta.num_days() % 7,
@@ -65,7 +90,7 @@ impl TimeDeltaParser {
         }
     }
 
-    fn to_time_delta(&self) -> Result<chrono::TimeDelta, Box<dyn std::error::Error>> {
+    fn to_config(&self) -> Result<chrono::TimeDelta, Box<dyn std::error::Error>> {
         Ok(
             chrono::TimeDelta::try_weeks(self.weeks).ok_or_else(|| "Too many weeks")?
             + chrono::TimeDelta::try_days(self.days).ok_or_else(|| "Too many days")?
@@ -108,13 +133,16 @@ pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::E
 mod tests {
     use super::*;
 
-    const DEFAULT_JSON: &str = r#"{
-    "time_limit": {
-        "weeks": 2,
-        "days": 0,
-        "hours": 0,
-        "minutes": 0,
-        "seconds": 0
+    const DEFAULT_JSON: &str =
+r#"{
+    "trash": {
+        "time_limit": {
+            "weeks": 2,
+            "days": 0,
+            "hours": 0,
+            "minutes": 0,
+            "seconds": 0
+        }
     }
 }"#;
 

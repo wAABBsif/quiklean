@@ -23,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        if chrono::Local::now() - info.deletion_date > config.time_limit {
+        if chrono::Local::now() - info.deletion_date > config.trash.time_limit {
             match quiklean::delete_file_or_directory(&entry.file) {
                 Ok(_v) => println!("Successfully deleted '{}'", entry.file.to_string_lossy()),
                 Err(e) => println!("Could not delete '{}' ({e})", entry.file.to_string_lossy()),
