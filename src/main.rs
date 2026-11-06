@@ -4,30 +4,34 @@ use quiklean::trash;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_path = config::get_config_path()?;
     let config = config::Config::from_json(&config::read_config_file(&config_path)?)?;
-    println!("Successfully loaded config file {}", config_path.to_str().unwrap_or("UNKNOWN"));
+    println!("Successfully loaded config from '{}'", config_path.to_string_lossy());
 
-    let trash_files = trash::get_trash_files_dir().ok_or_else(
-        || "Expected to find trash files path")?;
-    let trash_info = trash::get_trash_info_dir().ok_or_else(
-        || "Expected to find trash info path")?;
-    println!("Successfully found trash files at {}", trash_files.to_str().unwrap_or("UNKNOWN"));
-    println!("Successfully found trash info at {}", trash_info.to_str().unwrap_or("UNKNOWN"));
+    let trash_files = trash::get_trash_files_dir()?;
+    println!("Successfully found trash files at '{}'", trash_files.to_string_lossy());
+
+    let trash_info = trash::get_trash_info_dir()?;
+    println!("Successfully found trash info at '{}'", trash_info.to_string_lossy());
 
     let trash_entries = trash::TrashEntry::read_trash_dir(&trash_files, &trash_info)?;
     for entry in trash_entries {
-        let now = chrono::Local::now();
-        let info = trash::TrashInfo::read_file(&entry.info)?;
-        let diff = now - info.deletion_date;
-        if diff > config.time_limit {
-            if entry.file.is_dir() {
-                std::fs::remove_dir_all(&entry.file)?;
-                println!("Removed directory {}", entry.file.to_str().unwrap_or("UNKNOWN"));
+        let info = match trash::TrashInfo::read_file(&entry.info) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Could not read info file '{}': ({e})", entry.info.to_string_lossy());
+                continue
             }
-            else {
-                std::fs::remove_file(&entry.file)?;
-                println!("Removed file {}", entry.file.to_str().unwrap_or("UNKNOWN"));
-            }
-            std::fs::remove_file(&entry.info)?;
+        };
+        if chrono::Local::now() - info.deletion_date > config.time_limit {
+            match quiklean::delete_file_or_directory(&entry.file) {
+                Ok(_v) => println!("Successfully deleted '{}'", entry.file.to_string_lossy()),
+                Err(e) => println!("Could not delete '{}' ({e})", entry.file.to_string_lossy()),
+            };
+            match std::fs::remove_file(&entry.info) {
+                Ok(_v) => println!("Successfully deleted info file '{}'",
+                    entry.info.to_string_lossy()),
+                Err(e) => println!("Could not delete info file '{}' ({e})",
+                    entry.info.to_string_lossy()),
+            };
         }
     }
     Ok(()) 

@@ -36,7 +36,7 @@ impl Config {
                 let unit_value = unit_value.as_i64().ok_or_else(|| error_msg.clone())?;
                 seconds += Config::TIME_UNITS_AS_SECONDS[i] * unit_value;
             }
-            result.time_limit = TimeDelta::try_seconds(seconds).ok_or_else(|| "time too large!")?;
+            result.time_limit = TimeDelta::try_seconds(seconds).ok_or_else(|| "Time too large!")?;
         }
 
         Ok(result)

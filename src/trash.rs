@@ -2,32 +2,32 @@ use std::{fs, io::Read, path::PathBuf, str::FromStr};
 use chrono::{DateTime, TimeZone};
 
 //Should be /home/[USER]/.local/share/Trash
-pub fn get_trash_dir() -> Option<PathBuf> {
-    let mut path = dirs::data_local_dir()?;
+pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let mut path = dirs::data_local_dir().ok_or_else(|| "Could not find local data directory")?;
     path.push("Trash");
-    if !fs::exists(&path).ok()? {
-        return None
+    if !fs::exists(&path)? {
+        Err(format!("Trash directory '{}' doesn't exist", path.to_string_lossy()))?
     }
-    return Some(path);
+    Ok(path)
 }
 //Should be /home/[USER]/.local/share/Trash/files
-pub fn get_trash_files_dir() -> Option<PathBuf> {
+pub fn get_trash_files_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = get_trash_dir()?;
     path.push("files");
-    if !fs::exists(&path).ok()? {
-        return None
+    if !fs::exists(&path)? {
+        Err(format!("Trash files directory '{}' doesn't exist", path.to_string_lossy()))?
     }
-    return Some(path);
+    Ok(path)
 }
 
 //Should be /home/[USER]/.local/share/Trash/info
-pub fn get_trash_info_dir() -> Option<PathBuf> {
+pub fn get_trash_info_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = get_trash_dir()?;
     path.push("info");
-    if !fs::exists(&path).ok()? {
-        return None
+    if !fs::exists(&path)? {
+        Err(format!("Trash info directory '{}' doesn't exist", path.to_string_lossy()))?
     }
-    return Some(path);
+    Ok(path)
 }
 
 pub struct TrashEntry {
@@ -77,14 +77,14 @@ pub struct TrashInfo {
 }
 
 impl TrashInfo {
-    pub fn read_file(path: &PathBuf) -> Result<TrashInfo, Box <dyn std::error::Error>> {
+    pub fn read_file(path: &PathBuf) -> Result<TrashInfo, Box<dyn std::error::Error>> {
         let mut file = fs::File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         let mut lines = contents.lines();
         //Trashinfo files MUST contain this as the first line.
         if lines.next().unwrap_or_default() != "[Trash Info]" {
-            Err("Info file does not contain [Trash Info] as first line")?;
+            Err("Info file does not contain [Trash Info] as first line")?
         }
         
         //The specification says that the first instance of these values is to be used.
@@ -126,18 +126,19 @@ impl TrashInfo {
         })
     }
 
-    fn get_path_from_string(path: &str) -> Result<PathBuf, Box <dyn std::error::Error>> {
+    fn get_path_from_string(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
         //We COULD decode the percent-encoding but it's not necessary for functionality
         Ok(PathBuf::from_str(path)?)
     }
 
     fn get_deletion_date_from_string(deletion_date: &str) -> Result<DateTime<chrono::Local>,
-        Box <dyn std::error::Error>>
+        Box<dyn std::error::Error>>
     {
         //The way chrono sees rfc3339 and the way Linux sees it is seemingly different
         let fixed = chrono::DateTime::parse_from_rfc3339(&(String::from(deletion_date) + "Z"))?;
         let naive = fixed.naive_utc();
         let result = chrono::Local.from_local_datetime(&naive);
-        return Ok(result.single().ok_or_else(|| "Could not convert time")?);
+        Ok(result.single().ok_or_else(||
+                format!("Could not convert {} into time", deletion_date))?)
     }
 }
