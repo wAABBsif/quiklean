@@ -30,18 +30,12 @@ cargo run # Run the program (debug mode)
 
 - [ ] Support cleaning of arbitrary
 folders outside of just trash
-- [ ] Add different cleaning modes
-using file modified, accessed,
-and created dates
-- [ ] Add different removal modes
-such as sending files to trash or
-shredding so they are
-unrecovable.
-- [ ] Create systemd service so that
-the program doesn’t need to be
-run manually
-- [ ] Add support for scheduling the
-program in different ways
+- [ ] Support recursive searching or only deleting files for arbitrary folders
+- [ ] Add different removal modes for arbitrary folders such as sending files to trash or shredding so they are unrecovable.
+- [ ] Add different cleaning modes using file modified, accessed, and created dates
+- [ ] Implement support for different arguments to be called when running the program, such as loading different config files, or cleaning specific directories
+- [ ] Create systemd service so that the program doesn’t need to be run manually
+- [ ] Add support for scheduling the program in different ways
 
 ## Author
 
