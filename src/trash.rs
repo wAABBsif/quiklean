@@ -72,6 +72,27 @@ impl TrashEntry {
 
         Ok(result)
     }
+
+    pub fn create_cleaner(entries: Vec<TrashEntry>, time_limit: chrono::TimeDelta)
+        -> crate::cleaner::Cleaner
+    {
+        let mut result = crate::cleaner::Cleaner::new();
+        let now = chrono::Local::now();
+        for entry in entries {
+            let info = match TrashInfo::read_file(&entry.info) {
+                Ok(v) => v,
+                Err(e) => {
+                    println!("Could not read info file '{}': ({e})", entry.info.to_string_lossy());
+                    continue
+                }
+            };
+            if now - info.deletion_date > time_limit {
+                result.entries.push(crate::cleaner::CleanerEntry::new(entry.file));
+                result.entries.push(crate::cleaner::CleanerEntry::new(entry.info));
+            }
+        }
+        result
+    }
 }
 
 pub struct TrashInfo {

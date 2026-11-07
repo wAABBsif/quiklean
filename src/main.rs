@@ -14,25 +14,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Successfully found trash info at '{}'", trash_info.to_string_lossy());
 
     let trash_entries = trash::TrashEntry::read_trash_dir(&trash_files, &trash_info)?;
-    for entry in trash_entries {
-        let info = match trash::TrashInfo::read_file(&entry.info) {
-            Ok(v) => v,
-            Err(e) => {
-                println!("Could not read info file '{}': ({e})", entry.info.to_string_lossy());
-                continue
-            }
-        };
-
-        if chrono::Local::now() - info.deletion_date > config.trash.time_limit {
-            match quiklean::delete_file_or_directory(&entry.file) {
-                Ok(_v) => println!("Successfully deleted '{}'", entry.file.to_string_lossy()),
-                Err(e) => println!("Could not delete '{}' ({e})", entry.file.to_string_lossy()),
-            };
-            match std::fs::remove_file(&entry.info) {
-                Ok(_v) => println!("Successfully deleted '{}'", entry.info.to_string_lossy()),
-                Err(e) => println!("Could not delete '{}' ({e})", entry.info.to_string_lossy()),
-            };
-        }
-    }
+    let mut trash_cleaner = trash::TrashEntry::create_cleaner(trash_entries,
+        config.trash.time_limit);
+    trash_cleaner.clean();
     Ok(()) 
 }
