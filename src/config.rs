@@ -1,167 +1,29 @@
-use std::{fs, io::{Read, Write}, path::PathBuf, str::FromStr};
+use std::{fs, io::{Read, Write}, path::PathBuf};
 
-#[derive(PartialEq, Eq, Debug, Default)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Config {
-    pub trash: Trash,
-    pub folders: Vec<Folder>
+    pub trash: Option<Trash>,
+    pub folders: Option<Vec<Folder>>
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Trash {
-    pub is_enabled: bool,
-    pub time_limit: chrono::TimeDelta
+    pub time_limit: TimeLimitConfig
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Folder {
     pub target: PathBuf,
-    pub time_limit: chrono::TimeDelta
+    pub time_limit: TimeLimitConfig
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-struct ConfigParser {
-    trash: Option<TrashParser>,
-    folders: Option<Vec<FolderParser>>
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-struct TrashParser {
-    is_enabled: bool,
-    time_limit: TimeDeltaParser
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-struct FolderParser {
-    pub target: String,
-    pub time_limit: TimeDeltaParser
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-struct TimeDeltaParser {
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
+pub struct TimeLimitConfig {
     weeks: i64,
     days: i64,
     hours: i64,
     minutes: i64,
     seconds: i64
-}
-
-impl Config {
-    pub fn default() -> Config {
-        Config {
-            trash: Trash {
-                is_enabled: true,
-                time_limit: chrono::TimeDelta::weeks(2)
-            },
-            folders: vec![]
-        }
-    }
-
-    pub fn from_json(json: &str) -> Result<Config, Box<dyn std::error::Error>>{
-        let result: ConfigParser = serde_json::from_str(json)?;
-        let result: Config = result.to_config()?;
-        Ok(result)
-    }
-
-    pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let result = ConfigParser::from_config(self)?;
-        let result = serde_json::to_string_pretty(&result)?;
-        Ok(result)
-    }
-}
-
-impl Default for Trash {
-    fn default() -> Trash {
-        Trash {
-            is_enabled: false,
-            time_limit: chrono::TimeDelta::default(),
-        }
-    }
-}
-
-impl ConfigParser {
-    fn from_config(config: &Config) -> Result<ConfigParser, Box<dyn std::error::Error>> {
-        Ok(ConfigParser {
-            trash: Some(TrashParser::from_config(&config.trash)?),
-            folders: Some(FolderParser::from_config(&config.folders)?),
-        })
-    }
-
-    fn to_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
-        Ok(Config {
-            trash: match &self.trash {
-                Some(v) => v.to_config()?,
-                None => Trash::default(),
-            },
-            folders: match &self.folders {
-                Some(v) => FolderParser::to_config(v)?,
-                None => vec![]
-            }
-        })
-    }
-}
-
-impl TrashParser {
-    fn from_config(trash: &Trash) -> Result<TrashParser, Box<dyn std::error::Error>> {
-        Ok(TrashParser {
-            is_enabled: trash.is_enabled,
-            time_limit: TimeDeltaParser::from_config(&trash.time_limit)
-        })
-    }
-
-    fn to_config(&self) -> Result<Trash, Box<dyn std::error::Error>> {
-        Ok(Trash {
-            is_enabled: self.is_enabled,
-            time_limit: self.time_limit.to_config()?
-        })
-    }
-}
-
-impl FolderParser {
-    fn from_config(folders: &Vec<Folder>)
-        -> Result<Vec<FolderParser>, Box<dyn std::error::Error>>
-    {
-        let mut result: Vec<FolderParser> = vec![];
-        for folder in folders {
-            result.push(FolderParser {
-                target: String::from(folder.target.to_str().ok_or_else(|| "Path invalid")?),
-                time_limit: TimeDeltaParser::from_config(&folder.time_limit),
-            });
-        }
-        Ok(result)
-    }
-
-    fn to_config(parser: &Vec<FolderParser>) -> Result<Vec<Folder>, Box<dyn std::error::Error>> {
-        let mut result: Vec<Folder> = vec![];
-        for entry in parser {
-            result.push(Folder {
-                target: PathBuf::from_str(&entry.target)?,
-                time_limit: entry.time_limit.to_config()?,
-            });
-        }
-        Ok(result)
-    }
-}
-
-impl TimeDeltaParser {
-    fn from_config(delta: &chrono::TimeDelta) -> TimeDeltaParser {
-        TimeDeltaParser {
-            weeks: delta.num_weeks(),
-            days: delta.num_days() % 7,
-            hours: delta.num_hours() % 24,
-            minutes: delta.num_minutes() % 60,
-            seconds: delta.num_seconds() % 60
-        }
-    }
-
-    fn to_config(&self) -> Result<chrono::TimeDelta, Box<dyn std::error::Error>> {
-        Ok(
-            chrono::TimeDelta::try_weeks(self.weeks).ok_or_else(|| "Too many weeks")?
-            + chrono::TimeDelta::try_days(self.days).ok_or_else(|| "Too many days")?
-            + chrono::TimeDelta::try_hours(self.hours).ok_or_else(|| "Too many hours")?
-            + chrono::TimeDelta::try_minutes(self.minutes).ok_or_else(|| "Too many minutes")?
-            + chrono::TimeDelta::try_seconds(self.seconds).ok_or_else(|| "Too many seconds")?
-        )
-    }
 }
 
 //Should be /home/[USER]/.config/quiklean/config.json
@@ -189,6 +51,51 @@ pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::E
 
     file.read_to_string(&mut contents)?;
     Ok(contents)
+}
+
+impl Config {
+    pub fn default() -> Config {
+        Config {
+            trash: Some(Trash {
+                time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(2))
+            }),
+            folders: Some(vec![])
+        }
+    }
+
+    pub fn from_json(json: &str) -> Result<Config, Box<dyn std::error::Error>>{
+        Ok(serde_json::from_str(json)?)
+    }
+
+    pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let result = serde_json::to_string_pretty(&self)?;
+        Ok(result)
+    }
+}
+
+impl From<chrono::TimeDelta> for TimeLimitConfig {
+    fn from(delta: chrono::TimeDelta) -> TimeLimitConfig {
+        TimeLimitConfig {
+            weeks: delta.num_weeks(),
+            days: delta.num_days() % 7,
+            hours: delta.num_hours() % 24,
+            minutes: delta.num_minutes() % 60,
+            seconds: delta.num_seconds() % 60
+        }
+    }
+}
+
+impl TryInto<chrono::TimeDelta> for TimeLimitConfig {
+    type Error = String;
+    fn try_into(self) -> Result<chrono::TimeDelta, String> {
+        let error_msg = "Time limit is too high";
+        Ok(chrono::TimeDelta::try_weeks(self.weeks).ok_or_else(|| error_msg)?
+            + chrono::TimeDelta::try_days(self.days).ok_or_else(|| error_msg)?
+            + chrono::TimeDelta::try_hours(self.hours).ok_or_else(|| error_msg)?
+            + chrono::TimeDelta::try_minutes(self.minutes).ok_or_else(|| error_msg)?
+            + chrono::TimeDelta::try_seconds(self.seconds).ok_or_else(|| error_msg)?
+        )
+    }
 }
 
 //These tests ensure that configurations can be converted to and from .json files.
