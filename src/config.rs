@@ -1,6 +1,6 @@
 use std::{fs, io::{Read, Write}, path::PathBuf, str::FromStr};
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub struct Config {
     pub trash: Trash,
     pub folders: Vec<Folder>
@@ -20,8 +20,8 @@ pub struct Folder {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct ConfigParser {
-    trash: TrashParser,
-    folders: Vec<FolderParser>
+    trash: Option<TrashParser>,
+    folders: Option<Vec<FolderParser>>
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -30,13 +30,13 @@ struct TrashParser {
     time_limit: TimeDeltaParser
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 struct FolderParser {
     pub target: String,
     pub time_limit: TimeDeltaParser
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 struct TimeDeltaParser {
     weeks: i64,
     days: i64,
@@ -69,18 +69,33 @@ impl Config {
     }
 }
 
+impl Default for Trash {
+    fn default() -> Trash {
+        Trash {
+            is_enabled: false,
+            time_limit: chrono::TimeDelta::default(),
+        }
+    }
+}
+
 impl ConfigParser {
     fn from_config(config: &Config) -> Result<ConfigParser, Box<dyn std::error::Error>> {
         Ok(ConfigParser {
-            trash: TrashParser::from_config(&config.trash)?,
-            folders: FolderParser::from_config(&config.folders)?,
+            trash: Some(TrashParser::from_config(&config.trash)?),
+            folders: Some(FolderParser::from_config(&config.folders)?),
         })
     }
 
     fn to_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
         Ok(Config {
-            trash: self.trash.to_config()?,
-            folders: FolderParser::to_config(&self.folders)?,
+            trash: match &self.trash {
+                Some(v) => v.to_config()?,
+                None => Trash::default(),
+            },
+            folders: match &self.folders {
+                Some(v) => FolderParser::to_config(v)?,
+                None => vec![]
+            }
         })
     }
 }
