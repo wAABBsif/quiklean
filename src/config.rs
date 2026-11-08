@@ -1,8 +1,9 @@
-use std::{fs, io::{Read, Write}, path::PathBuf};
+use std::{fs, io::{Read, Write}, path::PathBuf, str::FromStr};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Config {
-    pub trash: Trash
+    pub trash: Trash,
+    pub folders: Vec<Folder>
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -11,15 +12,28 @@ pub struct Trash {
     pub time_limit: chrono::TimeDelta
 }
 
+#[derive(PartialEq, Eq, Debug)]
+pub struct Folder {
+    pub target: PathBuf,
+    pub time_limit: chrono::TimeDelta
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 struct ConfigParser {
-    trash: TrashParser
+    trash: TrashParser,
+    folders: Vec<FolderParser>
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct TrashParser {
     is_enabled: bool,
     time_limit: TimeDeltaParser
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct FolderParser {
+    pub target: String,
+    pub time_limit: TimeDeltaParser
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -37,7 +51,8 @@ impl Config {
             trash: Trash {
                 is_enabled: true,
                 time_limit: chrono::TimeDelta::weeks(2)
-            }
+            },
+            folders: vec![]
         }
     }
 
@@ -57,13 +72,15 @@ impl Config {
 impl ConfigParser {
     fn from_config(config: &Config) -> Result<ConfigParser, Box<dyn std::error::Error>> {
         Ok(ConfigParser {
-            trash: TrashParser::from_config(&config.trash)?
+            trash: TrashParser::from_config(&config.trash)?,
+            folders: FolderParser::from_config(&config.folders)?,
         })
     }
 
     fn to_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
         Ok(Config {
-            trash: self.trash.to_config()?
+            trash: self.trash.to_config()?,
+            folders: FolderParser::to_config(&self.folders)?,
         })
     }
 }
@@ -81,6 +98,32 @@ impl TrashParser {
             is_enabled: self.is_enabled,
             time_limit: self.time_limit.to_config()?
         })
+    }
+}
+
+impl FolderParser {
+    fn from_config(folders: &Vec<Folder>)
+        -> Result<Vec<FolderParser>, Box<dyn std::error::Error>>
+    {
+        let mut result: Vec<FolderParser> = vec![];
+        for folder in folders {
+            result.push(FolderParser {
+                target: String::from(folder.target.to_str().ok_or_else(|| "Path invalid")?),
+                time_limit: TimeDeltaParser::from_config(&folder.time_limit),
+            });
+        }
+        Ok(result)
+    }
+
+    fn to_config(parser: &Vec<FolderParser>) -> Result<Vec<Folder>, Box<dyn std::error::Error>> {
+        let mut result: Vec<Folder> = vec![];
+        for entry in parser {
+            result.push(Folder {
+                target: PathBuf::from_str(&entry.target)?,
+                time_limit: entry.time_limit.to_config()?,
+            });
+        }
+        Ok(result)
     }
 }
 
@@ -149,7 +192,8 @@ r#"{
             "minutes": 0,
             "seconds": 0
         }
-    }
+    },
+    "folders": []
 }"#;
 
 
