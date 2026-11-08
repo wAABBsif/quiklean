@@ -7,6 +7,7 @@ pub struct Config {
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Trash {
+    pub is_enabled: bool,
     pub time_limit: chrono::TimeDelta
 }
 
@@ -17,6 +18,7 @@ struct ConfigParser {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct TrashParser {
+    is_enabled: bool,
     time_limit: TimeDeltaParser
 }
 
@@ -33,6 +35,7 @@ impl Config {
     pub fn default() -> Config {
         Config {
             trash: Trash {
+                is_enabled: true,
                 time_limit: chrono::TimeDelta::weeks(2)
             }
         }
@@ -68,12 +71,14 @@ impl ConfigParser {
 impl TrashParser {
     fn from_config(trash: &Trash) -> Result<TrashParser, Box<dyn std::error::Error>> {
         Ok(TrashParser {
+            is_enabled: trash.is_enabled,
             time_limit: TimeDeltaParser::from_config(&trash.time_limit)
         })
     }
 
     fn to_config(&self) -> Result<Trash, Box<dyn std::error::Error>> {
         Ok(Trash {
+            is_enabled: self.is_enabled,
             time_limit: self.time_limit.to_config()?
         })
     }
@@ -136,6 +141,7 @@ mod tests {
     const DEFAULT_JSON: &str =
 r#"{
     "trash": {
+        "is_enabled": true,
         "time_limit": {
             "weeks": 2,
             "days": 0,
