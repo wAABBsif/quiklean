@@ -1,5 +1,6 @@
 use quiklean::config;
 use quiklean::trash;
+use quiklean::folder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_path = config::get_config_path()?;
@@ -9,7 +10,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match handle_trash(config.trash) {
         Ok(v) => v,
-        Err(e) => println!("Failed to clean up trash ({})", e)
+        Err(e) => println!("Failed to clean trash: {e}")
+    }
+    if config.folders.is_some() {
+        let folders = config.folders.unwrap();
+        for folder in &folders {
+            match handle_folder(&folder) {
+                Ok(v) => v,
+                Err(e) => println!("Failed to clean folder ({}): {e}",
+                    folder.target.to_string_lossy()), 
+            }
+        }
     }
     Ok(()) 
 }
@@ -30,5 +41,12 @@ fn handle_trash(config: Option<config::Trash>) -> Result<(), Box<dyn std::error:
     let time_limit = config.time_limit.try_into()?;
     let mut trash_cleaner = trash::TrashEntry::create_cleaner(trash_entries, time_limit);
     trash_cleaner.clean();
+    Ok(())
+}
+
+fn handle_folder(config: &config::Folder) -> Result<(), Box<dyn std::error::Error>> {
+    for file in &folder::read_folder(&config.target)? {
+        println!("Found {}", file.to_string_lossy());
+    }
     Ok(())
 }
