@@ -13,7 +13,7 @@ pub struct Trash {
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Folder {
-    pub target: PathBuf,
+    pub target: String,
     pub time_limit: TimeLimitConfig
 }
 

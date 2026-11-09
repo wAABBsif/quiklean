@@ -17,8 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for folder in &folders {
             match handle_folder(&folder) {
                 Ok(v) => v,
-                Err(e) => println!("Failed to clean folder ({}): {e}",
-                    folder.target.to_string_lossy()), 
+                Err(e) => println!("Failed to clean folder ({}): {e}", folder.target), 
             }
         }
     }
@@ -45,7 +44,8 @@ fn handle_trash(config: Option<config::Trash>) -> Result<(), Box<dyn std::error:
 }
 
 fn handle_folder(config: &config::Folder) -> Result<(), Box<dyn std::error::Error>> {
-    for file in &folder::read_folder(&config.target)? {
+    let target = folder::path_from_string(&config.target)?;
+    for file in folder::read_folder(&target)? {
         println!("Found {}", file.to_string_lossy());
     }
     Ok(())
