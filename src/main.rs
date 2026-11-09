@@ -9,15 +9,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Successfully loaded config from '{}'", config_path.to_string_lossy());
 
     match handle_trash(config.trash) {
-        Ok(v) => v,
+        Ok(_v) => println!("Successfully cleaned trash"),
         Err(e) => println!("Failed to clean trash: {e}")
     }
     if config.folders.is_some() {
         let folders = config.folders.unwrap();
         for folder in &folders {
             match handle_folder(&folder) {
-                Ok(v) => v,
-                Err(e) => println!("Failed to clean folder ({}): {e}", folder.target), 
+                Ok(_v) => println!("Successfully cleaned folder ({})", folder.target),
+                Err(e) => println!("Failed to clean folder ({}): {e}", folder.target),
             }
         }
     }
