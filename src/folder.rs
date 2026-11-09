@@ -26,3 +26,32 @@ pub fn read_folder(dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn std::error::Er
 
     Ok(result)
 }
+
+pub fn create_cleaner(entries: Vec<PathBuf>, time_limit: chrono::TimeDelta)
+    -> crate::cleaner::Cleaner
+{
+    let mut result = crate::cleaner::Cleaner::new();
+    let now = chrono::Local::now();
+    for entry in entries { 
+        let modified_time = match get_modified_time(&entry) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Could not read file modified of '{}': {e}", entry.to_string_lossy());
+                continue
+            }
+        };
+        if now - modified_time > time_limit {
+            result.entries.push(crate::cleaner::CleanerEntry::new(entry));
+        }
+    }
+    result
+}
+
+fn get_modified_time(path: &PathBuf)
+    -> Result<chrono::DateTime<chrono::Local>, Box<dyn std::error::Error>>
+{
+    let metadata = std::fs::metadata(path)?;
+    let modified_time = metadata.modified()?;
+    let modified_time: chrono::DateTime<chrono::Local> = chrono::DateTime::from(modified_time);
+    Ok(modified_time)
+}

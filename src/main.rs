@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use quiklean::config;
 use quiklean::trash;
 use quiklean::folder;
@@ -14,10 +16,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if config.folders.is_some() {
         let folders = config.folders.unwrap();
-        for folder in &folders {
-            match handle_folder(&folder) {
-                Ok(_v) => println!("Finished cleaning folder ({})", folder.target),
-                Err(e) => println!("Failed to clean folder ({}): {e}", folder.target),
+        for folder in folders {
+            match handle_folder(folder) {
+                Ok(v) => println!("Finished cleaning folder ({})", v.to_string_lossy()),
+                Err(e) => println!("Failed to clean folder: {e}"),
             }
         }
     }
@@ -43,10 +45,11 @@ fn handle_trash(config: Option<config::Trash>) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
-fn handle_folder(config: &config::Folder) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_folder(config: config::Folder) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let target = folder::path_from_string(&config.target)?;
-    for file in folder::read_folder(&target)? {
-        println!("Found {}", file.to_string_lossy());
-    }
-    Ok(())
+    let files = folder::read_folder(&target)?;
+    let time_limit = config.time_limit.try_into()?;
+    let mut cleaner = folder::create_cleaner(files, time_limit);
+    cleaner.clean();
+    Ok(target)
 }
