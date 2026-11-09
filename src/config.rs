@@ -19,11 +19,11 @@ pub struct Folder {
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct TimeLimitConfig {
-    weeks: i64,
-    days: i64,
-    hours: i64,
-    minutes: i64,
-    seconds: i64
+    weeks: Option<i64>,
+    days: Option<i64>,
+    hours: Option<i64>,
+    minutes: Option<i64>,
+    seconds: Option<i64>
 }
 
 //Should be /home/[USER]/.config/quiklean/config.json
@@ -76,11 +76,11 @@ impl Config {
 impl From<chrono::TimeDelta> for TimeLimitConfig {
     fn from(delta: chrono::TimeDelta) -> TimeLimitConfig {
         TimeLimitConfig {
-            weeks: delta.num_weeks(),
-            days: delta.num_days() % 7,
-            hours: delta.num_hours() % 24,
-            minutes: delta.num_minutes() % 60,
-            seconds: delta.num_seconds() % 60
+            weeks: Some(delta.num_weeks()),
+            days: Some(delta.num_days() % 7),
+            hours: Some(delta.num_hours() % 24),
+            minutes: Some(delta.num_minutes() % 60),
+            seconds: Some(delta.num_seconds() % 60)
         }
     }
 }
@@ -89,11 +89,16 @@ impl TryInto<chrono::TimeDelta> for TimeLimitConfig {
     type Error = String;
     fn try_into(self) -> Result<chrono::TimeDelta, String> {
         let error_msg = "Time limit is too high";
-        Ok(chrono::TimeDelta::try_weeks(self.weeks).ok_or_else(|| error_msg)?
-            + chrono::TimeDelta::try_days(self.days).ok_or_else(|| error_msg)?
-            + chrono::TimeDelta::try_hours(self.hours).ok_or_else(|| error_msg)?
-            + chrono::TimeDelta::try_minutes(self.minutes).ok_or_else(|| error_msg)?
-            + chrono::TimeDelta::try_seconds(self.seconds).ok_or_else(|| error_msg)?
+        Ok(chrono::TimeDelta::try_weeks(self.weeks.unwrap_or_default()).ok_or_else(
+                || error_msg)?
+            + chrono::TimeDelta::try_days(self.days.unwrap_or_default()).ok_or_else(
+                || error_msg)?
+            + chrono::TimeDelta::try_hours(self.hours.unwrap_or_default()).ok_or_else(
+                || error_msg)?
+            + chrono::TimeDelta::try_minutes(self.minutes.unwrap_or_default()).ok_or_else(
+                || error_msg)?
+            + chrono::TimeDelta::try_seconds(self.seconds.unwrap_or_default()).ok_or_else(
+                || error_msg)?
         )
     }
 }
@@ -109,10 +114,6 @@ r#"{
         "is_enabled": true,
         "time_limit": {
             "weeks": 2,
-            "days": 0,
-            "hours": 0,
-            "minutes": 0,
-            "seconds": 0
         }
     },
     "folders": []
