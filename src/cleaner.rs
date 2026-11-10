@@ -16,8 +16,9 @@ impl Cleaner {
     pub fn clean(&mut self) {
         for entry in &self.entries {
             match entry.delete() {
-                Ok(_v) => println!("Deleted '{}'", entry.path.to_string_lossy()),
-                Err(e) => println!("Could not delete '{}' ({e})", entry.path.to_string_lossy()),
+                Ok(_v) => println!("Deleted [{}]", entry.path.to_string_lossy()),
+                Err(e) => eprintln!("Error: could not delete [{}]: {e}",
+                    entry.path.to_string_lossy()),
             };
         }
     }

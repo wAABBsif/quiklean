@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf, str::FromStr};
 pub fn path_from_string(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = String::from(path);
     if path.contains("~") {
-        let home = dirs::home_dir().ok_or_else(|| "Could not find home directory")?;
+        let home = dirs::home_dir().ok_or_else(|| "could not find home directory")?;
         let home = home.to_string_lossy();
         path = path.replace("~", &home);
     }
@@ -36,7 +36,8 @@ pub fn create_cleaner(entries: Vec<PathBuf>, time_limit: chrono::TimeDelta)
         let modified_time = match get_modified_time(&entry) {
             Ok(v) => v,
             Err(e) => {
-                println!("Could not read file modified of '{}': {e}", entry.to_string_lossy());
+                eprintln!("Error: could not read file modified of [{}] ({e})",
+                    entry.to_string_lossy());
                 continue
             }
         };

@@ -28,7 +28,7 @@ pub struct TimeLimitConfig {
 
 //Should be /home/[USER]/.config/quiklean/config.json
 pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
-    let mut config_dir = dirs::config_dir().ok_or_else(|| "Could not find config path")?;
+    let mut config_dir = dirs::config_dir().ok_or_else(|| "could not find config path")?;
 
     config_dir.push("quiklean/");
     fs::create_dir_all(&config_dir)?;
@@ -88,7 +88,7 @@ impl From<chrono::TimeDelta> for TimeLimitConfig {
 impl TryInto<chrono::TimeDelta> for TimeLimitConfig {
     type Error = String;
     fn try_into(self) -> Result<chrono::TimeDelta, String> {
-        let error_msg = "Time limit is too high";
+        let error_msg = "time limit is too high";
         Ok(chrono::TimeDelta::try_weeks(self.weeks.unwrap_or_default()).ok_or_else(
                 || error_msg)?
             + chrono::TimeDelta::try_days(self.days.unwrap_or_default()).ok_or_else(

@@ -3,11 +3,11 @@ use chrono::{DateTime, TimeZone};
 
 //Should be /home/[USER]/.local/share/Trash
 pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let mut path = dirs::data_local_dir().ok_or_else(|| "Could not find local data directory")?;
+    let mut path = dirs::data_local_dir().ok_or_else(|| "could not find local data directory")?;
     path.push("Trash");
 
     if !fs::exists(&path)? {
-        Err(format!("Trash directory '{}' doesn't exist", path.to_string_lossy()))?
+        Err(format!("trash directory [{}] doesn't exist", path.to_string_lossy()))?
     }
     Ok(path)
 }
@@ -17,7 +17,7 @@ pub fn get_trash_files_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     path.push("files");
 
     if !fs::exists(&path)? {
-        Err(format!("Trash files directory '{}' doesn't exist", path.to_string_lossy()))?
+        Err(format!("trash files directory [{}] doesn't exist", path.to_string_lossy()))?
     }
     Ok(path)
 }
@@ -28,7 +28,7 @@ pub fn get_trash_info_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     path.push("info");
 
     if !fs::exists(&path)? {
-        Err(format!("Trash info directory '{}' doesn't exist", path.to_string_lossy()))?
+        Err(format!("trash info directory [{}] doesn't exist", path.to_string_lossy()))?
     }
     Ok(path)
 }
@@ -82,7 +82,8 @@ impl TrashEntry {
             let info = match TrashInfo::read_file(&entry.info) {
                 Ok(v) => v,
                 Err(e) => {
-                    println!("Could not read info file '{}': ({e})", entry.info.to_string_lossy());
+                    eprintln!("Error: could not read info file [{}] ({e})",
+                        entry.info.to_string_lossy());
                     continue
                 }
             };
@@ -109,7 +110,7 @@ impl TrashInfo {
 
         //Trashinfo files MUST contain this as the first line.
         if lines.next().unwrap_or_default() != "[Trash Info]" {
-            Err("Info file does not contain [Trash Info] as first line")?
+            Err("info file does not contain '[Trash Info]' as first line")?
         }
         
         //The specification says that the first instance of these values is to be used.
@@ -147,8 +148,8 @@ impl TrashInfo {
         }
 
         Ok(TrashInfo {
-            path: path.ok_or_else(|| "Could not find path")?,
-            deletion_date: deletion_date.ok_or_else(|| "Could not find deletion date")?,
+            path: path.ok_or_else(|| "could not find path")?,
+            deletion_date: deletion_date.ok_or_else(|| "could not find deletion date")?,
         })
     }
 
