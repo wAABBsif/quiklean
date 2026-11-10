@@ -28,8 +28,7 @@ cargo run # Run the program (debug mode)
 
 ## Roadmap
 
-- [ ] Support cleaning of arbitrary
-folders outside of just trash
+- [x] Support cleaning of arbitrary folders outside of just trash
 - [ ] Support recursive searching or only deleting files for arbitrary folders
 - [ ] Add different removal modes for arbitrary folders such as sending files to trash or shredding so they are unrecovable.
 - [ ] Add different cleaning modes using file modified, accessed, and created dates
