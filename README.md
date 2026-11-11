@@ -30,7 +30,7 @@ cargo run # Run the program (debug mode)
 
 - [x] Support cleaning of arbitrary folders outside of just trash
 - [x] Support recursive searching or only deleting files for arbitrary folders
-- [ ] Add recycle removal mode for arbitrary folders.
+- [ ] Add recycle removal mode for arbitrary folders
 - [ ] Add different cleaning modes using file modified, accessed, and created dates
 - [ ] Implement support for different arguments to be called when running the program, such as loading different config files, or cleaning specific directories
 - [ ] Create systemd service so that the program doesn’t need to be run manually
