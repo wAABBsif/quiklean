@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
-use crate::cleaning;
+use crate::{cleaning, config};
 
 pub fn path_from_string(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = String::from(path);
@@ -29,12 +29,32 @@ pub fn read_folder(dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn std::error::Er
     Ok(result)
 }
 
-pub fn create_cleaner_entries(entries: Vec<PathBuf>, time_limit: chrono::TimeDelta)
-    -> Vec<cleaning::Entry>
+pub fn create_cleaner_entries(entries: Vec<PathBuf>, time_limit: chrono::TimeDelta,
+    directories: config::Directories) -> Vec<cleaning::Entry>
 {
     let mut result = vec![];
     let now = chrono::Local::now();
     for entry in entries { 
+        if entry.is_dir() {
+            match directories {
+                config::Directories::Disabled => continue,
+                config::Directories::Recursive => {
+                    let dir_paths = match read_folder(&entry) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            eprintln!("Could not read directory [{}] ({e})",
+                                entry.to_string_lossy());
+                            continue
+                        }
+                    };
+                    let mut dir_vec = create_cleaner_entries(dir_paths, time_limit, 
+                        config::Directories::Recursive);
+                    result.append(&mut dir_vec);
+                    continue
+                },
+                config::Directories::Enabled => ()
+            }
+        }
         let modified_time = match get_modified_time(&entry) {
             Ok(v) => v,
             Err(e) => {

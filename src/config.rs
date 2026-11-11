@@ -14,7 +14,8 @@ pub struct Trash {
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Folder {
     pub target: String,
-    pub time_limit: TimeLimitConfig
+    pub time_limit: TimeLimitConfig,
+    pub directories: Option<Directories>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
@@ -24,6 +25,14 @@ pub struct TimeLimitConfig {
     hours: Option<i64>,
     minutes: Option<i64>,
     seconds: Option<i64>
+}
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Default)]
+pub enum Directories {
+    Disabled,
+    Recursive,
+    #[default]
+    Enabled
 }
 
 //Should be /home/[USER]/.config/quiklean/config.json
@@ -41,9 +50,11 @@ pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::E
     let mut file: fs::File;
 
     if !fs::exists(&path)? {
+        println!("Configuration [{}] was not found", path.to_string_lossy());
         file = fs::File::create(&path)?;
         let contents = Config::to_json(&Config::default())?;
         write!(file, "{}", contents)?;
+        println!("Created default configuration [{}]", path.to_string_lossy());
     }
 
     file = fs::File::open(path)?;
@@ -73,7 +84,8 @@ impl Default for Config {
             folders: Some(vec![
                 Folder {
                     target: String::from("~/Downloads"),
-                    time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(4))
+                    time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(4)),
+                    directories: Some(Directories::Enabled),
                 }
             ])
         }
@@ -135,7 +147,8 @@ r#"{
                 "hours": 0,
                 "minutes": 0,
                 "seconds": 0
-            }
+            },
+            "directories": "Enabled"
         }
     ]
 }"#;

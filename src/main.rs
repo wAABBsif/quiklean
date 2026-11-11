@@ -53,7 +53,8 @@ fn handle_folder(config: config::Folder)
     let target = folder::path_from_string(&config.target)?;
     let files = folder::read_folder(&target)?;
     let time_limit = config.time_limit.try_into()?;
-    let cleaner_entries = folder::create_cleaner_entries(files, time_limit);
+    let directories = config.directories.unwrap_or_default();
+    let cleaner_entries = folder::create_cleaner_entries(files, time_limit, directories);
     cleaning::clean(cleaner_entries);
     println!("Finished cleaning up folder [{}]", target.to_string_lossy());
     Ok(target)
