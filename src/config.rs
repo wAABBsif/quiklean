@@ -70,7 +70,12 @@ impl Default for Config {
             trash: Some(Trash {
                 time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(2))
             }),
-            folders: Some(vec![])
+            folders: Some(vec![
+                Folder {
+                    target: String::from("~/Downloads"),
+                    time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(4))
+                }
+            ])
         }
     }
 }
@@ -113,12 +118,26 @@ mod tests {
     const DEFAULT_JSON: &str =
 r#"{
     "trash": {
-        "is_enabled": true,
         "time_limit": {
             "weeks": 2,
+            "days": 0,
+            "hours": 0,
+            "minutes": 0,
+            "seconds": 0
         }
     },
-    "folders": []
+    "folders": [
+        {
+            "target": "~/Downloads",
+            "time_limit": {
+                "weeks": 4,
+                "days": 0,
+                "hours": 0,
+                "minutes": 0,
+                "seconds": 0
+            }
+        }
+    ]
 }"#;
 
 
