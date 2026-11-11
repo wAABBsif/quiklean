@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use quiklean::cleaning;
 use quiklean::config;
 use quiklean::trash;
 use quiklean::folder;
@@ -7,7 +8,7 @@ use quiklean::folder;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_path = config::get_config_path()?;
     let config = config::read_config_file(&config_path)?;
-    println!("Found config at [{}]", config_path.to_string_lossy());
+    println!("Located config path [{}]", config_path.to_string_lossy());
     let config = config::Config::from_json(&config)?;
     println!("Loaded config from [{}]", config_path.to_string_lossy());
 
@@ -26,7 +27,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(()) 
 }
 
-fn handle_trash(config: Option<config::Trash>) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_trash(config: Option<config::Trash>)
+    -> Result<(), Box<dyn std::error::Error>> {
     if config.is_none() {
         return Ok(())
     }
@@ -40,18 +42,19 @@ fn handle_trash(config: Option<config::Trash>) -> Result<(), Box<dyn std::error:
     let trash_entries = trash::TrashEntry::read_trash_dir(&trash_files, &trash_info)?;
     println!("Gathered all trash files");
     let time_limit = config.time_limit.try_into()?;
-    let mut trash_cleaner = trash::TrashEntry::create_cleaner(trash_entries, time_limit);
-    trash_cleaner.clean();
+    let cleaner_entries = trash::TrashEntry::create_cleaner_entries(trash_entries, time_limit);
+    cleaning::clean(cleaner_entries);
     println!("Finished cleaning up trash");
     Ok(())
 }
 
-fn handle_folder(config: config::Folder) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn handle_folder(config: config::Folder)
+    -> Result<PathBuf, Box<dyn std::error::Error>> {
     let target = folder::path_from_string(&config.target)?;
     let files = folder::read_folder(&target)?;
     let time_limit = config.time_limit.try_into()?;
-    let mut cleaner = folder::create_cleaner(files, time_limit);
-    cleaner.clean();
+    let cleaner_entries = folder::create_cleaner_entries(files, time_limit);
+    cleaning::clean(cleaner_entries);
     println!("Finished cleaning up folder [{}]", target.to_string_lossy());
     Ok(target)
 }

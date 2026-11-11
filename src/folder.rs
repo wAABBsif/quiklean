@@ -1,5 +1,7 @@
 use std::{fs, path::PathBuf, str::FromStr};
 
+use crate::cleaning;
+
 pub fn path_from_string(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = String::from(path);
     if path.contains("~") {
@@ -27,10 +29,10 @@ pub fn read_folder(dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn std::error::Er
     Ok(result)
 }
 
-pub fn create_cleaner(entries: Vec<PathBuf>, time_limit: chrono::TimeDelta)
-    -> crate::cleaner::Cleaner
+pub fn create_cleaner_entries(entries: Vec<PathBuf>, time_limit: chrono::TimeDelta)
+    -> Vec<cleaning::Entry>
 {
-    let mut result = crate::cleaner::Cleaner::new();
+    let mut result = vec![];
     let now = chrono::Local::now();
     for entry in entries { 
         let modified_time = match get_modified_time(&entry) {
@@ -42,7 +44,7 @@ pub fn create_cleaner(entries: Vec<PathBuf>, time_limit: chrono::TimeDelta)
             }
         };
         if now - modified_time > time_limit {
-            result.entries.push(crate::cleaner::CleanerEntry::new(entry));
+            result.push(cleaning::Entry::new(entry));
         }
     }
     result

@@ -1,6 +1,8 @@
 use std::{fs, io::Read, path::PathBuf, str::FromStr};
 use chrono::{DateTime, TimeZone};
 
+use crate::cleaning;
+
 //Should be /home/[USER]/.local/share/Trash
 pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = dirs::data_local_dir().ok_or_else(|| "could not find local data directory")?;
@@ -73,10 +75,10 @@ impl TrashEntry {
         Ok(result)
     }
 
-    pub fn create_cleaner(entries: Vec<TrashEntry>, time_limit: chrono::TimeDelta)
-        -> crate::cleaner::Cleaner
+    pub fn create_cleaner_entries(entries: Vec<TrashEntry>, time_limit: chrono::TimeDelta)
+        -> Vec<cleaning::Entry>
     {
-        let mut result = crate::cleaner::Cleaner::new();
+        let mut result = vec![];
         let now = chrono::Local::now();
         for entry in entries {
             let info = match TrashInfo::read_file(&entry.info) {
@@ -88,8 +90,8 @@ impl TrashEntry {
                 }
             };
             if now - info.deletion_date > time_limit {
-                result.entries.push(crate::cleaner::CleanerEntry::new(entry.file));
-                result.entries.push(crate::cleaner::CleanerEntry::new(entry.info));
+                result.push(cleaning::Entry::new(entry.file));
+                result.push(cleaning::Entry::new(entry.info));
             }
         }
         result
