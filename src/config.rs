@@ -54,15 +54,6 @@ pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::E
 }
 
 impl Config {
-    pub fn default() -> Config {
-        Config {
-            trash: Some(Trash {
-                time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(2))
-            }),
-            folders: Some(vec![])
-        }
-    }
-
     pub fn from_json(json: &str) -> Result<Config, Box<dyn std::error::Error>>{
         Ok(serde_json::from_str(json)?)
     }
@@ -70,6 +61,17 @@ impl Config {
     pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
         let result = serde_json::to_string_pretty(&self)?;
         Ok(result)
+    }
+}
+
+impl Default for Config {
+    fn default() -> Config {
+        Config {
+            trash: Some(Trash {
+                time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(2))
+            }),
+            folders: Some(vec![])
+        }
     }
 }
 
