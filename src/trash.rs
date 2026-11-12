@@ -99,7 +99,7 @@ impl TrashEntry {
 }
 
 pub struct TrashInfo {
-    pub path: PathBuf,
+    pub path: String,
     pub deletion_date: DateTime<chrono::Local>
 }
 
@@ -117,7 +117,7 @@ impl TrashInfo {
         
         //The specification says that the first instance of these values is to be used.
         //Therefore, we only set these if they still don't already have a value.
-        let mut path: Option<PathBuf> = None;
+        let mut path: Option<String> = None;
         let mut deletion_date: Option<DateTime<chrono::Local>> = None;
         for line in lines {
             let mut entries = line.split('=');
@@ -129,11 +129,7 @@ impl TrashInfo {
                     if path.is_some() {
                         continue
                     }
-                    let result = TrashInfo::get_path_from_string(value);
-                    if result.is_err() {
-                        continue
-                    }
-                    path = Some(result.unwrap());
+                    path = Some(String::from(value));
                 }
                 "DeletionDate" => {
                     if deletion_date.is_some() {
@@ -155,10 +151,6 @@ impl TrashInfo {
         })
     }
 
-    fn get_path_from_string(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        //We COULD decode the percent-encoding but it's not necessary for functionality
-        Ok(PathBuf::from_str(path)?)
-    }
 
     fn get_deletion_date_from_string(deletion_date: &str) -> Result<DateTime<chrono::Local>,
         Box<dyn std::error::Error>>
