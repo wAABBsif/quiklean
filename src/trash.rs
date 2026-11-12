@@ -1,4 +1,4 @@
-use std::{fs, io::Read, path::PathBuf, str::FromStr};
+use std::{fs, io::Read, path::PathBuf};
 use chrono::{DateTime, TimeZone};
 
 use crate::cleaning;
@@ -33,6 +33,27 @@ pub fn get_trash_info_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
         Err(format!("trash info directory [{}] doesn't exist", path.to_string_lossy()))?
     }
     Ok(path)
+}
+
+pub fn trash_file_or_directory(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    let mut trash_file_path = get_trash_files_dir()?;
+    let mut trash_info_path = get_trash_info_dir()?;
+    let orig_file_name = path.file_name().ok_or_else(|| "Cannot find filename")?;
+    let mut file_name = String::from(orig_file_name.to_string_lossy());
+    trash_file_path.push(&file_name);
+    let mut idx = 0;
+    while std::fs::exists(&trash_file_path)? {
+        idx += 1;
+        file_name = format!("{}.{idx}", orig_file_name.to_string_lossy());
+        trash_file_path = PathBuf::from(trash_file_path.parent().ok_or_else(
+            || "Cannot get parent directory of trash file path")?);
+        trash_file_path.push(&file_name);
+    }
+    trash_info_path.push(&file_name);
+    trash_info_path.add_extension("trashinfo");
+    TrashInfo::write_file(&path, &trash_info_path)?;
+    std::fs::rename(path, trash_file_path)?;
+    Ok(())
 }
 
 pub struct TrashEntry {
@@ -104,7 +125,7 @@ pub struct TrashInfo {
 }
 
 impl TrashInfo {
-    pub fn read_file(path: &PathBuf) -> Result<TrashInfo, Box<dyn std::error::Error>> {
+    fn read_file(path: &PathBuf) -> Result<TrashInfo, Box<dyn std::error::Error>> {
         let mut file = fs::File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -151,6 +172,18 @@ impl TrashInfo {
         })
     }
 
+    fn write_file(filepath: &PathBuf, infopath: &PathBuf)
+        -> Result<(), Box<dyn std::error::Error>>
+    {
+        let mut result = String::from("[Trash Info]\n");
+        result += "Path=";
+        result += &filepath.to_string_lossy();
+        result += "\n";
+        result += "DeletionDate=";
+        result += &TrashInfo::get_string_from_deletion_date(chrono::Local::now())?;
+        std::fs::write(infopath, result)?;
+        Ok(())
+    }
 
     fn get_deletion_date_from_string(deletion_date: &str) -> Result<DateTime<chrono::Local>,
         Box<dyn std::error::Error>>
@@ -164,5 +197,14 @@ impl TrashInfo {
         let result = result.single();
         let result = result.ok_or_else(|| format!("Could not convert {deletion_date} into time"))?;
         Ok(result)
+    }
+
+    fn get_string_from_deletion_date(date: DateTime<chrono::Local>)
+        -> Result<String, Box<dyn std::error::Error>>
+    {
+        let result = date.to_rfc3339();
+        let end_index = result.find(".").ok_or_else(|| "DateTime String not formatted correctly")?;
+        let result = &result[0..end_index];
+        Ok(String::from(result))
     }
 }

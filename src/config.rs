@@ -16,6 +16,7 @@ pub struct Folder {
     pub target: String,
     pub time_limit: TimeLimitConfig,
     pub directories: Option<Directories>,
+    pub trash: Option<bool>
 }
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
@@ -86,6 +87,7 @@ impl Default for Config {
                     target: String::from("~/Downloads"),
                     time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(4)),
                     directories: Some(Directories::Enabled),
+                    trash: Some(true),
                 }
             ])
         }
@@ -148,7 +150,8 @@ r#"{
                 "minutes": 0,
                 "seconds": 0
             },
-            "directories": "Enabled"
+            "directories": "Enabled",
+            "trash": true
         }
     ]
 }"#;
