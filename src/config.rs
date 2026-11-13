@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write}, path::PathBuf};
+use std::{fs, io::{Read, Write}, path::{Path, PathBuf}};
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Config {
@@ -47,7 +47,7 @@ pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
     Ok(config_dir)
 }
 
-pub fn read_config_file(path: &PathBuf) -> Result<String, Box <dyn std::error::Error>> {
+pub fn read_config_file(path: &Path) -> Result<String, Box <dyn std::error::Error>> {
     let mut file: fs::File;
 
     if !fs::exists(&path)? {

@@ -1,7 +1,8 @@
 use crate::trash;
+use std::path::PathBuf;
 
 pub struct Entry {
-    pub path: std::path::PathBuf,
+    pub path: PathBuf,
 }
 
 pub fn clean(entries: Vec<Entry>, recycle: bool) {
@@ -23,7 +24,7 @@ pub fn clean(entries: Vec<Entry>, recycle: bool) {
 }
 
 impl Entry {
-    pub fn new(path: std::path::PathBuf) -> Entry {
+    pub fn new(path: PathBuf) -> Entry {
         Entry {
             path: path,
         }

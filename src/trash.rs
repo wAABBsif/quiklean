@@ -1,4 +1,4 @@
-use std::{fs, io::Read, path::PathBuf};
+use std::{fs, io::Read, path::{Path, PathBuf}};
 use chrono::{DateTime, TimeZone};
 
 use crate::cleaning;
@@ -35,7 +35,7 @@ pub fn get_trash_info_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     Ok(path)
 }
 
-pub fn trash_file_or_directory(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+pub fn trash_file_or_directory(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let mut trash_file_path = get_trash_files_dir()?;
     let mut trash_info_path = get_trash_info_dir()?;
     let orig_file_name = path.file_name().ok_or_else(|| "Cannot find filename")?;
@@ -51,7 +51,7 @@ pub fn trash_file_or_directory(path: &PathBuf) -> Result<(), Box<dyn std::error:
     }
     trash_info_path.push(&file_name);
     trash_info_path.add_extension("trashinfo");
-    TrashInfo::write_file(&path, &trash_info_path)?;
+    TrashInfo::write_file(path, &trash_info_path)?;
     std::fs::rename(path, trash_file_path)?;
     Ok(())
 }
@@ -69,7 +69,7 @@ impl TrashEntry {
         }
     }
 
-    pub fn read_trash_dir(files: &PathBuf, info: &PathBuf) ->
+    pub fn read_trash_dir(files: &Path, info: &Path) ->
         Result<Vec<TrashEntry>, Box<dyn std::error::Error>>
     {
         let mut result: Vec<TrashEntry> = Vec::new();
@@ -79,8 +79,8 @@ impl TrashEntry {
                 continue
             }
             let name = path.unwrap().file_name();
-            let mut file = files.clone();
-            let mut info = info.clone();
+            let mut file = PathBuf::from(files);
+            let mut info = PathBuf::from(info);
 
             file.push(&name);
             //Trashinfo files have the same name, but with the extension.
@@ -125,7 +125,7 @@ pub struct TrashInfo {
 }
 
 impl TrashInfo {
-    fn read_file(path: &PathBuf) -> Result<TrashInfo, Box<dyn std::error::Error>> {
+    fn read_file(path: &Path) -> Result<TrashInfo, Box<dyn std::error::Error>> {
         let mut file = fs::File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -172,7 +172,7 @@ impl TrashInfo {
         })
     }
 
-    fn write_file(filepath: &PathBuf, infopath: &PathBuf)
+    fn write_file(filepath: &Path, infopath: &Path)
         -> Result<(), Box<dyn std::error::Error>>
     {
         let mut result = String::from("[Trash Info]\n");

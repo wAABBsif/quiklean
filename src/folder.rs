@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{fs, path::{Path, PathBuf}, str::FromStr};
 
 use crate::{cleaning, config};
 
@@ -12,7 +12,7 @@ pub fn path_from_string(path: &str) -> Result<PathBuf, Box<dyn std::error::Error
     Ok(PathBuf::from_str(&path)?)
 }
 
-pub fn read_folder(dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+pub fn read_folder(dir: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
     let mut result: Vec<PathBuf> = Vec::new();
 
     for path in fs::read_dir(dir)? {
@@ -20,7 +20,7 @@ pub fn read_folder(dir: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn std::error::Er
             continue
         }
 
-        let mut file = dir.clone();
+        let mut file = PathBuf::from(dir);
         let name = path.unwrap().file_name();
         file.push(&name);
         result.push(file);
@@ -70,7 +70,7 @@ pub fn create_cleaner_entries(entries: Vec<PathBuf>, time_limit: chrono::TimeDel
     result
 }
 
-fn get_modified_time(path: &PathBuf)
+fn get_modified_time(path: &Path)
     -> Result<chrono::DateTime<chrono::Local>, Box<dyn std::error::Error>>
 {
     let metadata = std::fs::metadata(path)?;
