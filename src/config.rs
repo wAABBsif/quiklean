@@ -47,31 +47,33 @@ pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
     Ok(config_dir)
 }
 
-pub fn read_config_file(path: &Path) -> Result<String, Box <dyn std::error::Error>> {
+pub fn read_config_file(path: impl AsRef<Path>) -> Result<String, Box <dyn std::error::Error>> {
+    let path = path.as_ref();
     let mut file: fs::File;
 
-    if !fs::exists(&path)? {
+    if !fs::exists(path)? {
         println!("Configuration [{}] was not found", path.to_string_lossy());
-        file = fs::File::create(&path)?;
+        file = fs::File::create(path)?;
         let contents = Config::to_json(&Config::default())?;
         write!(file, "{}", contents)?;
         println!("Created default configuration [{}]", path.to_string_lossy());
+        return Ok(contents)
     }
 
     file = fs::File::open(path)?;
     let mut contents = String::new();
-
     file.read_to_string(&mut contents)?;
+
     Ok(contents)
 }
 
 impl Config {
-    pub fn from_json(json: &str) -> Result<Config, Box<dyn std::error::Error>>{
-        Ok(serde_json::from_str(json)?)
+    pub fn from_json(json: impl AsRef<str>) -> Result<Config, Box<dyn std::error::Error>>{
+        Ok(serde_json::from_str(json.as_ref())?)
     }
 
     pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let result = serde_json::to_string_pretty(&self)?;
+        let result = serde_json::to_string_pretty(self)?;
         Ok(result)
     }
 }

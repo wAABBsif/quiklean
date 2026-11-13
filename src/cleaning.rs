@@ -5,7 +5,7 @@ pub struct Entry {
     pub path: PathBuf,
 }
 
-pub fn clean(entries: Vec<Entry>, recycle: bool) {
+pub fn clean(entries: &[Entry], recycle: bool) {
     for entry in entries {
         if !recycle {
             match entry.delete() {
@@ -24,9 +24,9 @@ pub fn clean(entries: Vec<Entry>, recycle: bool) {
 }
 
 impl Entry {
-    pub fn new(path: PathBuf) -> Entry {
+    pub fn new(path: impl Into<PathBuf>) -> Entry {
         Entry {
-            path: path,
+            path: path.into(),
         }
     }
 

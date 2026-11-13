@@ -11,6 +11,7 @@ pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     if !fs::exists(&path)? {
         Err(format!("trash directory [{}] doesn't exist", path.to_string_lossy()))?
     }
+
     Ok(path)
 }
 //Should be /home/[USER]/.local/share/Trash/files
@@ -21,6 +22,7 @@ pub fn get_trash_files_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     if !fs::exists(&path)? {
         Err(format!("trash files directory [{}] doesn't exist", path.to_string_lossy()))?
     }
+
     Ok(path)
 }
 
@@ -32,10 +34,12 @@ pub fn get_trash_info_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     if !fs::exists(&path)? {
         Err(format!("trash info directory [{}] doesn't exist", path.to_string_lossy()))?
     }
+
     Ok(path)
 }
 
-pub fn trash_file_or_directory(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn trash_file_or_directory(path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+    let path = path.as_ref();
     let mut trash_file_path = get_trash_files_dir()?;
     let mut trash_info_path = get_trash_info_dir()?;
     let orig_file_name = path.file_name().ok_or_else(|| "Cannot find filename")?;
@@ -53,6 +57,7 @@ pub fn trash_file_or_directory(path: &Path) -> Result<(), Box<dyn std::error::Er
     trash_info_path.add_extension("trashinfo");
     TrashInfo::write_file(path, &trash_info_path)?;
     std::fs::rename(path, trash_file_path)?;
+
     Ok(())
 }
 
@@ -62,16 +67,18 @@ pub struct TrashEntry {
 }
 
 impl TrashEntry {
-    pub fn new (file: PathBuf, info: PathBuf) -> TrashEntry {
+    pub fn new (file: impl Into<PathBuf>, info: impl Into<PathBuf>) -> TrashEntry {
         TrashEntry {
-            file,
-            info,
+            file: file.into(),
+            info: info.into(),
         }
     }
 
-    pub fn read_trash_dir(files: &Path, info: &Path) ->
+    pub fn read_trash_dir(files: impl AsRef<Path>, info: impl AsRef<Path>) ->
         Result<Vec<TrashEntry>, Box<dyn std::error::Error>>
     {
+        let files = files.as_ref();
+        let info = info.as_ref();
         let mut result: Vec<TrashEntry> = Vec::new();
 
         for path in fs::read_dir(files)? {
@@ -96,12 +103,12 @@ impl TrashEntry {
         Ok(result)
     }
 
-    pub fn create_cleaner_entries(entries: Vec<TrashEntry>, time_limit: chrono::TimeDelta)
+    pub fn create_cleaner_entries(entries: &[TrashEntry], time_limit: chrono::TimeDelta)
         -> Vec<cleaning::Entry>
     {
         let mut result = vec![];
         let now = chrono::Local::now();
-        for entry in entries {
+        for entry in entries.iter() {
             let info = match TrashInfo::read_file(&entry.info) {
                 Ok(v) => v,
                 Err(e) => {
@@ -111,10 +118,11 @@ impl TrashEntry {
                 }
             };
             if now - info.deletion_date > time_limit {
-                result.push(cleaning::Entry::new(entry.file));
-                result.push(cleaning::Entry::new(entry.info));
+                result.push(cleaning::Entry::new(&entry.file));
+                result.push(cleaning::Entry::new(&entry.info));
             }
         }
+
         result
     }
 }
@@ -125,7 +133,8 @@ pub struct TrashInfo {
 }
 
 impl TrashInfo {
-    fn read_file(path: &Path) -> Result<TrashInfo, Box<dyn std::error::Error>> {
+    fn read_file(path: impl AsRef<Path>) -> Result<TrashInfo, Box<dyn std::error::Error>> {
+        let path = path.as_ref();
         let mut file = fs::File::open(path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -172,22 +181,24 @@ impl TrashInfo {
         })
     }
 
-    fn write_file(filepath: &Path, infopath: &Path)
+    fn write_file(filepath: impl AsRef<Path>, infopath: impl AsRef<Path>)
         -> Result<(), Box<dyn std::error::Error>>
     {
         let mut result = String::from("[Trash Info]\n");
         result += "Path=";
-        result += &filepath.to_string_lossy();
+        result += &filepath.as_ref().to_string_lossy();
         result += "\n";
         result += "DeletionDate=";
         result += &TrashInfo::get_string_from_deletion_date(chrono::Local::now())?;
         std::fs::write(infopath, result)?;
+
         Ok(())
     }
 
-    fn get_deletion_date_from_string(deletion_date: &str) -> Result<DateTime<chrono::Local>,
-        Box<dyn std::error::Error>>
+    fn get_deletion_date_from_string(deletion_date: impl AsRef<str>)
+        -> Result<DateTime<chrono::Local>, Box<dyn std::error::Error>>
     {
+        let deletion_date = deletion_date.as_ref();
         //The way chrono sees rfc3339 and the way Linux sees it is seemingly different
         //This is why the "Z" is added to deletion_date.
         let fixed = chrono::DateTime::parse_from_rfc3339(&(String::from(deletion_date) + "Z"))?;
@@ -196,6 +207,7 @@ impl TrashInfo {
         let result = chrono::Local.from_local_datetime(&naive);
         let result = result.single();
         let result = result.ok_or_else(|| format!("Could not convert {deletion_date} into time"))?;
+
         Ok(result)
     }
 
@@ -205,6 +217,7 @@ impl TrashInfo {
         let result = date.to_rfc3339();
         let end_index = result.find(".").ok_or_else(|| "DateTime String not formatted correctly")?;
         let result = &result[0..end_index];
+
         Ok(String::from(result))
     }
 }
