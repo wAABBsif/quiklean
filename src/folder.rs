@@ -32,7 +32,7 @@ pub fn read_folder(dir: impl AsRef<Path>) -> Result<Vec<PathBuf>, Box<dyn std::e
 }
 
 pub fn create_cleaner_entries(entries: &[PathBuf], time_limit: chrono::TimeDelta,
-    directories: config::Directories) -> Vec<cleaning::Entry>
+    directories: config::Directories, time_metric: config::TimeMetric) -> Vec<cleaning::Entry>
 {
     let mut result = vec![];
     let now = chrono::Local::now();
@@ -49,34 +49,38 @@ pub fn create_cleaner_entries(entries: &[PathBuf], time_limit: chrono::TimeDelta
                             continue
                         }
                     };
-                    let mut dir_vec = create_cleaner_entries(&dir_paths, time_limit, 
-                        config::Directories::Recursive);
+                    let mut dir_vec = create_cleaner_entries(&dir_paths, time_limit,
+                        directories, time_metric);
                     result.append(&mut dir_vec);
                     continue
                 },
                 config::Directories::Enabled => ()
             }
         }
-        let modified_time = match get_modified_time(&entry) {
+        let metric_time = match get_metric_time(&entry, time_metric) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("Error: could not read file modified of [{}] ({e})",
+                eprintln!("Error: could not read File {time_metric} of [{}] ({e})",
                     entry.to_string_lossy());
                 continue
             }
         };
-        if now - modified_time > time_limit {
+        if now - metric_time > time_limit {
             result.push(cleaning::Entry::new(entry));
         }
     }
     result
 }
 
-fn get_modified_time(path: impl AsRef<Path>)
+fn get_metric_time(path: impl AsRef<Path>, metric: config::TimeMetric)
     -> Result<chrono::DateTime<chrono::Local>, Box<dyn std::error::Error>>
 {
     let metadata = std::fs::metadata(path)?;
-    let modified_time = metadata.modified()?;
-    let modified_time: chrono::DateTime<chrono::Local> = chrono::DateTime::from(modified_time);
-    Ok(modified_time)
+    let metric_time = match metric {
+        config::TimeMetric::Created => metadata.created(),
+        config::TimeMetric::Modified => metadata.modified(),
+        config::TimeMetric::Accessed => metadata.accessed()
+    }?;
+    let metric_time: chrono::DateTime<chrono::Local> = chrono::DateTime::from(metric_time);
+    Ok(metric_time)
 }

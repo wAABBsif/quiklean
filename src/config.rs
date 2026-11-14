@@ -16,6 +16,7 @@ pub struct Folder {
     pub target: String,
     pub time_limit: TimeLimitConfig,
     pub directories: Option<Directories>,
+    pub time_metric: Option<TimeMetric>,
     pub trash: Option<bool>
 }
 
@@ -28,12 +29,21 @@ pub struct TimeLimitConfig {
     seconds: Option<i64>
 }
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Default)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Default, Clone, Copy)]
 pub enum Directories {
     Disabled,
     Recursive,
     #[default]
     Enabled
+}
+
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Default, Clone, Copy)]
+pub enum TimeMetric {
+    Created,
+    #[default]
+    Modified,
+    Accessed
 }
 
 //Should be /home/[USER]/.config/quiklean/config.json
@@ -88,7 +98,8 @@ impl Default for Config {
                 Folder {
                     target: String::from("~/Downloads"),
                     time_limit: TimeLimitConfig::from(chrono::TimeDelta::weeks(4)),
-                    directories: Some(Directories::Enabled),
+                    directories: Some(Directories::default()),
+                    time_metric: Some(TimeMetric::default()),
                     trash: Some(true),
                 }
             ])
@@ -126,6 +137,16 @@ impl TryInto<chrono::TimeDelta> for TimeLimitConfig {
     }
 }
 
+impl std::fmt::Display for TimeMetric {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            TimeMetric::Created => "Created",
+            TimeMetric::Modified => "Modified",
+            TimeMetric::Accessed => "Accessed"
+        })
+    }
+}
+
 //These tests ensure that configurations can be converted to and from .json files.
 #[cfg(test)]
 mod tests {
@@ -153,6 +174,7 @@ r#"{
                 "seconds": 0
             },
             "directories": "Enabled",
+            "time_metric": "Modified",
             "trash": true
         }
     ]

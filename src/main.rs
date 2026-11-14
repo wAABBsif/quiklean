@@ -55,7 +55,8 @@ fn handle_folder(config: config::Folder) -> Result<PathBuf, Box<dyn std::error::
     let files = folder::read_folder(&target)?;
     let time_limit = config.time_limit.try_into()?;
     let directories = config.directories.unwrap_or_default();
-    let cleaner_entries = folder::create_cleaner_entries(&files, time_limit, directories);
+    let metric = config.time_metric.unwrap_or_default();
+    let cleaner_entries = folder::create_cleaner_entries(&files, time_limit, directories, metric);
     cleaning::clean(&cleaner_entries, config.trash.unwrap_or_default());
 
     println!("Finished cleaning up folder [{}]", target.to_string_lossy());
