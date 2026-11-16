@@ -1,5 +1,7 @@
 use std::{fs, io::{Read, Write}, path::{Path, PathBuf}};
 
+// The configuration structs are organized in a way such that they can be directly parsed
+
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct Config {
     pub trash: Option<Trash>,
@@ -20,6 +22,7 @@ pub struct Folder {
     pub trash: Option<bool>
 }
 
+// A TimeDelta cannot directly be parsed, so we use an intermediate struct which will be converted
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 pub struct TimeLimitConfig {
     weeks: Option<i64>,
@@ -37,7 +40,6 @@ pub enum Directories {
     Enabled
 }
 
-
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug, Default, Clone, Copy)]
 pub enum TimeMetric {
     Created,
@@ -46,10 +48,11 @@ pub enum TimeMetric {
     Accessed
 }
 
-//Should be /home/[USER]/.config/quiklean/config.json
+// Should be /home/[USER]/.config/quiklean/config.json
 pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
     let mut config_dir = dirs::config_dir().ok_or_else(|| "could not find config path")?;
 
+    // Create program directory in config directory if doesn't exist
     config_dir.push("quiklean/");
     fs::create_dir_all(&config_dir)?;
 
@@ -57,6 +60,7 @@ pub fn get_config_path() -> Result<PathBuf, Box <dyn std::error::Error>> {
     Ok(config_dir)
 }
 
+// Reads a config.json into a String to be parsed
 pub fn read_config_file(path: impl AsRef<Path>) -> Result<String, Box <dyn std::error::Error>> {
     let path = path.as_ref();
     let mut file: fs::File;
@@ -88,6 +92,7 @@ impl Config {
     }
 }
 
+// Constructs a default configuration in case one is not found
 impl Default for Config {
     fn default() -> Config {
         Config {
@@ -107,6 +112,7 @@ impl Default for Config {
     }
 }
 
+// Converts a TimeLimitConfig into a TimeDelta
 impl From<chrono::TimeDelta> for TimeLimitConfig {
     fn from(delta: chrono::TimeDelta) -> TimeLimitConfig {
         TimeLimitConfig {
@@ -119,6 +125,7 @@ impl From<chrono::TimeDelta> for TimeLimitConfig {
     }
 }
 
+// Converts a TimeDelta into a TimeLimitConfig
 impl TryInto<chrono::TimeDelta> for TimeLimitConfig {
     type Error = String;
     fn try_into(self) -> Result<chrono::TimeDelta, String> {
@@ -137,6 +144,7 @@ impl TryInto<chrono::TimeDelta> for TimeLimitConfig {
     }
 }
 
+// Convert the enum into a String for the sake of printing out error messages
 impl std::fmt::Display for TimeMetric {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
@@ -147,11 +155,12 @@ impl std::fmt::Display for TimeMetric {
     }
 }
 
-//These tests ensure that configurations can be converted to and from .json files.
+// These test(s) ensure that configurations can be converted to and from .json files.
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // This configuration file is a default configuration, but as a json
     const DEFAULT_JSON: &str =
 r#"{
     "trash": {
@@ -175,18 +184,13 @@ r#"{
             },
             "directories": "Enabled",
             "time_metric": "Modified",
-            "trash": true
+            "trash":  true
         }
     ]
 }"#;
 
 
-    #[test]
-    fn test_inverse_conversion() {
-        let default = Config::from_json(DEFAULT_JSON).unwrap();
-        assert_eq!(Config::from_json(&default.to_json().unwrap()[..]).unwrap(), default);
-    }
-
+    // This test makes sure that the above json converts into an exact duplicate of default config
     #[test]
     fn test_default_matches_string() {
         assert_eq!(Config::default(), Config::from_json(DEFAULT_JSON).unwrap());

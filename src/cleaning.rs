@@ -1,12 +1,14 @@
 use crate::trash;
 use std::path::PathBuf;
 
+// This is an entry of a file which will be fed into the below function to be cleaned
 pub struct Entry {
     pub path: PathBuf,
 }
 
 pub fn clean(entries: &[Entry], recycle: bool) {
     for entry in entries {
+        // Recycle OR delete the file
         if !recycle {
             match entry.delete() {
                 Ok(_v) => println!("Deleted [{}]", entry.path.to_string_lossy()),

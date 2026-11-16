@@ -15,7 +15,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Err(e) = handle_trash(config.trash) {
         eprintln!("Error: failed to clean trash: ({e})");
     }
-
+    
+    // Don't unwrap folders until we've checked that the configuration includes folders at all
     if config.folders.is_some() {
         let folders = config.folders.unwrap();
         for folder in folders {
@@ -30,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn handle_trash(config: Option<config::Trash>) -> Result<(), Box<dyn std::error::Error>> {
+    // Return early if trash is not included in configuration
     if config.is_none() {
         return Ok(())
     }
@@ -40,6 +42,8 @@ fn handle_trash(config: Option<config::Trash>) -> Result<(), Box<dyn std::error:
     let trash_info = trash::get_trash_info_dir()?;
     println!("Found trash info at [{}]", trash_info.to_string_lossy());
 
+
+    // trash_info is necessary to read the deletion date of the files in trash_files
     let trash_entries = trash::TrashEntry::read_trash_dir(trash_files, trash_info)?;
     println!("Gathered all trash files");
     let time_limit = config.time_limit.try_into()?;

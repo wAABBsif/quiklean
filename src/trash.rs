@@ -3,7 +3,7 @@ use chrono::{DateTime, TimeZone};
 
 use crate::cleaning;
 
-//Should be /home/[USER]/.local/share/Trash
+// Should be /home/[USER]/.local/share/Trash
 pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = dirs::data_local_dir().ok_or_else(|| "could not find local data directory")?;
     path.push("Trash");
@@ -14,7 +14,7 @@ pub fn get_trash_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
 
     Ok(path)
 }
-//Should be /home/[USER]/.local/share/Trash/files
+// Should be /home/[USER]/.local/share/Trash/files
 pub fn get_trash_files_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = get_trash_dir()?;
     path.push("files");
@@ -26,7 +26,7 @@ pub fn get_trash_files_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     Ok(path)
 }
 
-//Should be /home/[USER]/.local/share/Trash/info
+// Should be /home/[USER]/.local/share/Trash/info
 pub fn get_trash_info_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut path = get_trash_dir()?;
     path.push("info");
@@ -42,22 +42,30 @@ pub fn trash_file_or_directory(path: impl AsRef<Path>) -> Result<(), Box<dyn std
     let path = path.as_ref();
     let mut trash_file_path = get_trash_files_dir()?;
     let mut trash_info_path = get_trash_info_dir()?;
-    let orig_file_name = path.file_name().ok_or_else(|| "Cannot find filename")?;
-    let mut file_name = String::from(orig_file_name.to_string_lossy());
+
+    let file_name = path.file_name().ok_or_else(|| "Cannot find filename")?;
+    let mut file_name = String::from(file_name.to_string_lossy());
+    // The file will have the same name, but it will be in the trash folder
     trash_file_path.push(&file_name);
+
+    // If a file with {filename} already exists, go through a loop trying to name
+    // it {filename}.{index} until we get a name that doesn't already exist
     let mut idx = 0;
     while std::fs::exists(&trash_file_path)? {
         idx += 1;
-        file_name = format!("{}.{idx}", orig_file_name.to_string_lossy());
+        file_name = format!("{}.{idx}", file_name);
         trash_file_path = PathBuf::from(trash_file_path.parent().ok_or_else(
             || "Cannot get parent directory of trash file path")?);
         trash_file_path.push(&file_name);
     }
+
+    // Create trashinfo file to store original path and deletion date of file
     trash_info_path.push(&file_name);
     trash_info_path.add_extension("trashinfo");
     TrashInfo::write_file(path, &trash_info_path)?;
-    std::fs::rename(path, trash_file_path)?;
 
+    // If everything else went successful, we can safely move the file into trash
+    std::fs::rename(path, trash_file_path)?;
     Ok(())
 }
 
@@ -90,9 +98,10 @@ impl TrashEntry {
             let mut info = PathBuf::from(info);
 
             file.push(&name);
-            //Trashinfo files have the same name, but with the extension.
+            // Trashinfo files have the same name, but with the extension.
             info.push(&name);
             info.add_extension("trashinfo");
+            // Make sure that the info file exists or skip
             if !fs::exists(&info).unwrap_or(false) {
                 continue
             }
@@ -103,6 +112,7 @@ impl TrashEntry {
         Ok(result)
     }
 
+    // Create a vector of every single entry with an old enough trash date to be deleted
     pub fn create_cleaner_entries(entries: &[TrashEntry], time_limit: chrono::TimeDelta)
         -> Vec<cleaning::Entry>
     {
@@ -118,6 +128,7 @@ impl TrashEntry {
                 }
             };
             if now - info.deletion_date > time_limit {
+                // We want to delete both the file and its info
                 result.push(cleaning::Entry::new(&entry.file));
                 result.push(cleaning::Entry::new(&entry.info));
             }
@@ -140,13 +151,13 @@ impl TrashInfo {
         file.read_to_string(&mut contents)?;
         let mut lines = contents.lines();
 
-        //Trashinfo files MUST contain this as the first line.
+        // Trashinfo files MUST contain this as the first line.
         if lines.next().unwrap_or_default() != "[Trash Info]" {
             Err("info file does not contain '[Trash Info]' as first line")?
         }
         
-        //The specification says that the first instance of these values is to be used.
-        //Therefore, we only set these if they still don't already have a value.
+        // The specification says that the first instance of these values is to be used.
+        // Therefore, we only set these if they still don't already have a value.
         let mut path: Option<String> = None;
         let mut deletion_date: Option<DateTime<chrono::Local>> = None;
         for line in lines {
@@ -189,6 +200,7 @@ impl TrashInfo {
         result += &filepath.as_ref().to_string_lossy();
         result += "\n";
         result += "DeletionDate=";
+        // Set the deletion date/time of the file to now and store it as a String in the info file
         result += &TrashInfo::get_string_from_deletion_date(chrono::Local::now())?;
         std::fs::write(infopath, result)?;
 
@@ -199,8 +211,8 @@ impl TrashInfo {
         -> Result<DateTime<chrono::Local>, Box<dyn std::error::Error>>
     {
         let deletion_date = deletion_date.as_ref();
-        //The way chrono sees rfc3339 and the way Linux sees it is seemingly different
-        //This is why the "Z" is added to deletion_date.
+        // The way chrono sees rfc3339 and the way Linux sees it is seemingly different
+        // This is why the "Z" is added to deletion_date.
         let fixed = chrono::DateTime::parse_from_rfc3339(&(String::from(deletion_date) + "Z"))?;
         let naive = fixed.naive_utc();
 
